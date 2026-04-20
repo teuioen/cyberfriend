@@ -1,0 +1,881 @@
+# ===== 商店配置 =====
+# uses_per_unit: 每次购买可使用次数（默认1）
+# effects: health/fatigue/affection/cure_disease
+
+# 以下所有商品由AI生成，合不合理我也不知道......自己改去。。。
+
+
+items:
+  # ===== 医药/健康类 =====
+  - name: "999感冒灵颗粒(10包)"
+    price: 28
+    uses_per_unit: 10
+    description: "经典感冒药，治愈感冒，健康+15"
+    effects:
+      cure_disease: true
+      health: 15
+
+  - name: "芬必得布洛芬缓释胶囊(20粒)"
+    price: 22
+    uses_per_unit: 20
+    description: "止痛退烧，治愈发烧，健康+10"
+    effects:
+      cure_disease: true
+      health: 10
+
+  - name: "星鲨维生素C泡腾片(20片)"
+    price: 15
+    uses_per_unit: 20
+    description: "补充维C，健康+5，疲惫-8"
+    effects:
+      health: 5
+      fatigue: -8
+
+  - name: "白加黑感冒片(24片)"
+    price: 30
+    uses_per_unit: 24
+    description: "日夜分服，治愈感冒，健康+12"
+    effects:
+      cure_disease: true
+      health: 12
+
+  - name: "艾司唑仑片(14片)"
+    price: 45
+    uses_per_unit: 14
+    description: "改善睡眠，疲惫-30"
+    effects:
+      fatigue: -30
+
+  - name: "盐酸氟西汀胶囊(14粒)"
+    price: 88
+    uses_per_unit: 14
+    description: "抗抑郁焦虑，治愈心理疾病"
+    effects:
+      cure_disease: true
+      health: 5
+
+  - name: "邦迪创可贴(20片装)"
+    price: 8
+    uses_per_unit: 20
+    description: "小伤处理，健康+3"
+    effects:
+      health: 3
+
+  - name: "润洁护眼眼药水(10ml)"
+    price: 18
+    uses_per_unit: 30
+    description: "缓解眼疲劳，疲惫-10"
+    effects:
+      fatigue: -10
+
+  - name: "斯达舒胃药(24片)"
+    price: 26
+    uses_per_unit: 24
+    description: "护胃养胃，健康+8"
+    effects:
+      health: 8
+
+  - name: "京都念慈菴枇杷膏(150ml)"
+    price: 32
+    uses_per_unit: 15
+    description: "润喉止咳，健康+7，治愈感冒"
+    effects:
+      cure_disease: true
+      health: 7
+
+  - name: "999皮炎平软膏(10g)"
+    price: 12
+    uses_per_unit: 10
+    description: "皮肤修复，健康+4"
+    effects:
+      health: 4
+
+  - name: "正大青霉素V钾片(24片)"
+    price: 35
+    uses_per_unit: 24
+    description: "消炎抗菌，健康+10"
+    effects:
+      health: 10
+
+  - name: "汤臣倍健蛋白质粉(300g)"
+    price: 120
+    uses_per_unit: 20
+    description: "营养补充，健康+10，疲惫-10（每袋约20勺）"
+    effects:
+      health: 10
+      fatigue: -10
+
+  - name: "钙尔奇碳酸钙D3片(60片)"
+    price: 45
+    uses_per_unit: 60
+    description: "补钙强骨，健康+6"
+    effects:
+      health: 6
+
+  - name: "养乐多活菌型乳酸菌(5瓶)"
+    price: 18
+    uses_per_unit: 5
+    description: "调节肠胃，健康+5"
+    effects:
+      health: 5
+
+  # ===== 零食类 =====
+  - name: "乐事波浪薯片(原味大桶)"
+    price: 16
+    uses_per_unit: 3
+    description: "经典薯片，好感度+2"
+    effects:
+      affection: 2
+
+  - name: "奥利奥夹心饼干(388g)"
+    price: 22
+    uses_per_unit: 8
+    description: "好吃的饼干，好感度+2，疲惫-5（约8次享用）"
+    effects:
+      affection: 2
+      fatigue: -5
+
+  - name: "旺旺雪饼(大礼包)"
+    price: 18
+    uses_per_unit: 5
+    description: "童年零食，好感度+2"
+    effects:
+      affection: 2
+
+  - name: "Toblerone三角巧克力(100g)"
+    price: 35
+    uses_per_unit: 4
+    description: "瑞士进口，好感度+3（约4次享用）"
+    effects:
+      affection: 3
+
+  - name: "费列罗巧克力(16粒)"
+    price: 68
+    uses_per_unit: 16
+    description: "高档巧克力礼盒，好感度+6"
+    effects:
+      affection: 6
+
+  - name: "卡乐比麦片(800g)"
+    price: 48
+    uses_per_unit: 16
+    description: "健康早餐，健康+5，疲惫-5（约16份，每份50g）"
+    effects:
+      health: 5
+      fatigue: -5
+
+  - name: "良品铺子坚果大礼包(500g)"
+    price: 58
+    uses_per_unit: 10
+    description: "健康坚果，健康+6，好感度+3（约10份）"
+    effects:
+      health: 6
+      affection: 3
+
+  - name: "三只松鼠零食大礼包"
+    price: 79
+    uses_per_unit: 5
+    description: "多种零食，好感度+5（约5小包）"
+    effects:
+      affection: 5
+
+  - name: "旺旺仙贝(大包)"
+    price: 12
+    uses_per_unit: 3
+    description: "膨化零食，好感度+1"
+    effects:
+      affection: 1
+
+  - name: "卫龙大面筋(辣条豪华版)"
+    price: 15
+    uses_per_unit: 3
+    description: "辣条零食，好感度+2"
+    effects:
+      affection: 2
+
+  - name: "日本进口草莓糖(200g)"
+    price: 42
+    uses_per_unit: 10
+    description: "进口软糖，好感度+3（约10次享用）"
+    effects:
+      affection: 3
+
+  - name: "百草味蜂蜜手撕面包(整箱)"
+    price: 35
+    uses_per_unit: 8
+    description: "软糯面包，疲惫-8，好感度+2（约8包）"
+    effects:
+      fatigue: -8
+      affection: 2
+
+  - name: "德芙丝滑牛奶巧克力(252g)"
+    price: 28
+    uses_per_unit: 7
+    description: "丝滑巧克力，好感度+4（约7份）"
+    effects:
+      affection: 4
+
+  - name: "乌江涪陵榨菜(330g)"
+    price: 8
+    uses_per_unit: 10
+    description: "下饭神器，健康+2（约10份）"
+    effects:
+      health: 2
+
+  # ===== 饮料类 =====
+  - name: "红牛功能饮料(250ml×6罐)"
+    price: 58
+    uses_per_unit: 6
+    description: "快速提神，疲惫-25"
+    effects:
+      fatigue: -25
+
+  - name: "元气森林白桃气泡水(500ml×6瓶)"
+    price: 38
+    uses_per_unit: 6
+    description: "无糖好喝，疲惫-10"
+    effects:
+      fatigue: -10
+
+  - name: "农夫山泉天然水(550ml×24瓶)"
+    price: 28
+    uses_per_unit: 24
+    description: "日常补水，健康+4"
+    effects:
+      health: 4
+
+  - name: "脉动维C饮料(600ml×6瓶)"
+    price: 32
+    uses_per_unit: 6
+    description: "运动饮料，健康+5，疲惫-8"
+    effects:
+      health: 5
+      fatigue: -8
+
+  - name: "娃哈哈AD钙奶(220ml×20瓶)"
+    price: 35
+    uses_per_unit: 20
+    description: "童年回忆，健康+5，好感度+3"
+    effects:
+      health: 5
+      affection: 3
+
+  - name: "怡宝纯净水(550ml×24瓶)"
+    price: 22
+    uses_per_unit: 24
+    description: "日常饮用水，健康+3"
+    effects:
+      health: 3
+
+  - name: "可口可乐(330ml×6罐)"
+    price: 25
+    uses_per_unit: 6
+    description: "经典可乐，疲惫-8"
+    effects:
+      fatigue: -8
+
+  - name: "伊利纯牛奶(250ml×12盒)"
+    price: 48
+    uses_per_unit: 12
+    description: "补充营养，健康+8"
+    effects:
+      health: 8
+
+  # ===== 奶茶/咖啡类 =====
+  - name: "喜茶芝芝莓莓(大杯)"
+    price: 32
+    uses_per_unit: 1
+    description: "网红奶茶，疲惫-12，好感度+2"
+    effects:
+      fatigue: -12
+      affection: 2
+
+  - name: "星巴克馥芮白(Grande)"
+    price: 38
+    uses_per_unit: 1
+    description: "精品咖啡，疲惫-18"
+    effects:
+      fatigue: -18
+
+  - name: "瑞幸生椰拿铁(大杯)"
+    price: 22
+    uses_per_unit: 1
+    description: "瑞幸招牌，疲惫-15"
+    effects:
+      fatigue: -15
+
+  - name: "奈雪的茶霸气芝士草莓(大杯)"
+    price: 35
+    uses_per_unit: 1
+    description: "网红茶饮，疲惫-12，好感度+2"
+    effects:
+      fatigue: -12
+      affection: 2
+
+  - name: "蜜雪冰城柠檬水(大杯)"
+    price: 6
+    uses_per_unit: 1
+    description: "平价好喝，疲惫-6"
+    effects:
+      fatigue: -6
+
+  - name: "麦当劳麦咖啡拿铁(中杯)"
+    price: 18
+    uses_per_unit: 1
+    description: "快餐咖啡，疲惫-12"
+    effects:
+      fatigue: -12
+
+  - name: "雀巢速溶咖啡(12条装)"
+    price: 20
+    uses_per_unit: 12
+    description: "居家咖啡，疲惫-10"
+    effects:
+      fatigue: -10
+
+  # ===== 正餐/外卖类 =====
+  - name: "肯德基炸鸡桶(8块装)"
+    price: 69
+    uses_per_unit: 8
+    description: "经典炸鸡，健康+6，疲惫-15"
+    effects:
+      health: 6
+      fatigue: -15
+
+  - name: "麦当劳双层牛堡套餐"
+    price: 36
+    uses_per_unit: 1
+    description: "快餐套餐，健康+5，疲惫-10"
+    effects:
+      health: 5
+      fatigue: -10
+
+  - name: "必胜客双人分享餐"
+    price: 99
+    uses_per_unit: 1
+    description: "约饭套餐，健康+12，好感度+3"
+    effects:
+      health: 12
+      affection: 3
+
+  - name: "好利来芋泥波波蛋糕(6寸)"
+    price: 78
+    uses_per_unit: 6
+    description: "网红蛋糕，好感度+5（6块）"
+    effects:
+      affection: 5
+
+  - name: "海底捞火锅外卖双人套餐"
+    price: 188
+    uses_per_unit: 1
+    description: "网红火锅，健康+15，好感度+6"
+    effects:
+      health: 15
+      affection: 6
+
+  - name: "沙县小吃蒸饺+米饭套餐"
+    price: 12
+    uses_per_unit: 1
+    description: "实惠小吃，健康+5"
+    effects:
+      health: 5
+
+  - name: "杨国福麻辣烫(中份)"
+    price: 25
+    uses_per_unit: 1
+    description: "麻辣烫，健康+6，疲惫-5"
+    effects:
+      health: 6
+      fatigue: -5
+
+  - name: "外婆家传统腊肉饭盒"
+    price: 32
+    uses_per_unit: 1
+    description: "家常美食，健康+8"
+    effects:
+      health: 8
+
+  # ===== 礼物/鲜花类 =====
+  - name: "进口玫瑰花束(11朵)"
+    price: 65
+    uses_per_unit: 1
+    description: "浪漫玫瑰，好感度+8"
+    effects:
+      affection: 8
+
+  - name: "迪奥真我香水(50ml)"
+    price: 580
+    uses_per_unit: 150
+    description: "高端香水，好感度+20（约150次喷涂）"
+    effects:
+      affection: 20
+
+  - name: "泡泡玛特MOLLY经典手办"
+    price: 69
+    uses_per_unit: 1
+    description: "可爱盲盒，好感度+7"
+    effects:
+      affection: 7
+
+  - name: "小米米家星空投影仪"
+    price: 299
+    uses_per_unit: 90
+    description: "浪漫星空灯，好感度+15"
+    effects:
+      affection: 15
+
+  - name: "定制生日蛋糕"
+    price: 138
+    uses_per_unit: 1
+    description: "专属蛋糕，好感度+12"
+    effects:
+      affection: 12
+
+  - name: "泡泡玛特DIMOO盲盒"
+    price: 69
+    uses_per_unit: 1
+    description: "盲盒惊喜，好感度+6"
+    effects:
+      affection: 6
+
+  - name: "鲜花订阅礼盒(每周配送)"
+    price: 200
+    uses_per_unit: 1
+    description: "持续惊喜，好感度+18"
+    effects:
+      affection: 18
+
+  - name: "三生花向日葵花束(9朵)"
+    price: 45
+    uses_per_unit: 1
+    description: "阳光花束，好感度+6"
+    effects:
+      affection: 6
+
+  - name: "Jellycat邦尼兔毛绒玩具(中号)"
+    price: 180
+    uses_per_unit: 90
+    description: "超软毛绒，好感度+12"
+    effects:
+      affection: 12
+
+  - name: "无印良品香薰蜡烛(220g)"
+    price: 95
+    uses_per_unit: 22
+    description: "氛围感好物，好感度+8（约22次点燃）"
+    effects:
+      affection: 8
+
+  - name: "LUSH手工香皂礼盒"
+    price: 120
+    uses_per_unit: 1
+    description: "手工香皂，好感度+8"
+    effects:
+      affection: 8
+
+  - name: "屈臣氏面膜礼盒(10片装)"
+    price: 55
+    uses_per_unit: 10
+    description: "护肤礼物，好感度+5，健康+3"
+    effects:
+      affection: 5
+      health: 3
+
+  # ===== 美妆/护肤类 =====
+  - name: "SK-II神仙水(75ml)"
+    price: 980
+    uses_per_unit: 75
+    description: "顶级护肤，好感度+25，健康+5（约75次使用）"
+    effects:
+      affection: 25
+      health: 5
+
+  - name: "雅诗兰黛小棕瓶精华(30ml)"
+    price: 620
+    uses_per_unit: 60
+    description: "抗老精华，好感度+20（约60次使用）"
+    effects:
+      affection: 20
+
+  - name: "欧莱雅玻尿酸安瓶精华(7支)"
+    price: 129
+    uses_per_unit: 7
+    description: "补水精华，好感度+8"
+    effects:
+      affection: 8
+
+  - name: "珀莱雅双抗精华(30ml)"
+    price: 199
+    uses_per_unit: 60
+    description: "国货精华，好感度+10，健康+3（约60次使用）"
+    effects:
+      affection: 10
+      health: 3
+
+  - name: "花西子苗族印象口红(3.5g)"
+    price: 129
+    uses_per_unit: 100
+    description: "国潮口红，好感度+10（约100次涂抹）"
+    effects:
+      affection: 10
+
+  - name: "圣罗兰方管口红(3.8g)"
+    price: 330
+    uses_per_unit: 100
+    description: "奢侈口红，好感度+15（约100次涂抹）"
+    effects:
+      affection: 15
+
+  - name: "自然堂水乳套装(2件套)"
+    price: 88
+    uses_per_unit: 30
+    description: "补水保湿，好感度+5，健康+3（约30天用量）"
+    effects:
+      affection: 5
+      health: 3
+
+  - name: "倩麦芽滋养护手霜(50ml)"
+    price: 45
+    uses_per_unit: 50
+    description: "护手霜，好感度+3，健康+2（约50次涂抹）"
+    effects:
+      affection: 3
+      health: 2
+
+  # ===== 数码/配件类 =====
+  - name: "阿米洛樱桃红轴机械键盘(104键)"
+    price: 599
+    uses_per_unit: 365
+    description: "码农神器，好感度+20，健康+5"
+    effects:
+      affection: 20
+      health: 5
+
+  - name: "罗技G502 HERO有线鼠标"
+    price: 349
+    uses_per_unit: 365
+    description: "高精度鼠标，好感度+12"
+    effects:
+      affection: 12
+
+  - name: "苹果MagSafe充电器(15W)"
+    price: 329
+    uses_per_unit: 180
+    description: "无线快充，好感度+8"
+    effects:
+      affection: 8
+
+  - name: "小米移动电源3(10000mAh)"
+    price: 99
+    uses_per_unit: 90
+    description: "充电宝，好感度+5"
+    effects:
+      affection: 5
+
+  - name: "华为Type-C编织数据线(1m)"
+    price: 38
+    uses_per_unit: 90
+    description: "快充数据线，好感度+3"
+    effects:
+      affection: 3
+
+  - name: "AirPods Pro耳机保护套"
+    price: 29
+    uses_per_unit: 90
+    description: "耳机配件，好感度+2"
+    effects:
+      affection: 2
+
+  - name: "索尼WH-1000XM5降噪耳机"
+    price: 2299
+    uses_per_unit: 365
+    description: "顶级耳机，好感度+30，疲惫-15"
+    effects:
+      affection: 30
+      fatigue: -15
+
+  - name: "绿联USB-C多功能扩展坞"
+    price: 168
+    uses_per_unit: 180
+    description: "多口扩展，好感度+8"
+    effects:
+      affection: 8
+
+  - name: "贝尔金MagSafe无线充电板"
+    price: 229
+    uses_per_unit: 180
+    description: "桌面充电，好感度+6"
+    effects:
+      affection: 6
+
+  - name: "Anker氮化镓充电器65W"
+    price: 129
+    uses_per_unit: 180
+    description: "快充头，好感度+5"
+    effects:
+      affection: 5
+
+  - name: "电竞椅护腰靠垫(记忆棉)"
+    price: 89
+    uses_per_unit: 90
+    description: "久坐神器，健康+5，疲惫-8"
+    effects:
+      health: 5
+      fatigue: -8
+
+  # ===== 游戏/娱乐类 =====
+  - name: "Steam钱包充值卡(100元)"
+    price: 100
+    uses_per_unit: 1
+    description: "Steam余额，好感度+5，疲惫-5"
+    effects:
+      affection: 5
+      fatigue: -5
+
+  - name: "万达影城电影兑换券"
+    price: 45
+    uses_per_unit: 1
+    description: "约她看电影，好感度+7"
+    effects:
+      affection: 7
+
+  - name: "Nintendo Switch游戏卡带(健身环)"
+    price: 290
+    uses_per_unit: 90
+    description: "健身游戏，健康+8，好感度+10"
+    effects:
+      health: 8
+      affection: 10
+
+  - name: "网易云音乐黑胶VIP(年卡)"
+    price: 168
+    uses_per_unit: 1
+    description: "音乐会员，好感度+8，疲惫-8"
+    effects:
+      affection: 8
+      fatigue: -8
+
+  - name: "腾讯视频VIP(年卡)"
+    price: 238
+    uses_per_unit: 1
+    description: "视频会员，好感度+6，疲惫-6"
+    effects:
+      affection: 6
+      fatigue: -6
+
+  - name: "PlayStation Network充值卡(100元)"
+    price: 100
+    uses_per_unit: 1
+    description: "PSN余额，好感度+6"
+    effects:
+      affection: 6
+
+  - name: "乐高玩具积木(星战系列)"
+    price: 399
+    uses_per_unit: 60
+    description: "创意积木，好感度+12，疲惫-10"
+    effects:
+      affection: 12
+      fatigue: -10
+
+  # ===== 书籍/漫画类 =====
+  - name: "鬼灭之刃全套漫画(1-23卷)"
+    price: 299
+    uses_per_unit: 5
+    description: "她爱看漫画，好感度+10"
+    effects:
+      affection: 10
+
+  - name: "《解忧杂货店》东野圭吾"
+    price: 35
+    uses_per_unit: 3
+    description: "温情小说，好感度+4，疲惫-5"
+    effects:
+      affection: 4
+      fatigue: -5
+
+  - name: "《三体》刘慈欣(全三册精装)"
+    price: 138
+    uses_per_unit: 3
+    description: "科幻名著，好感度+8，疲惫-6"
+    effects:
+      affection: 8
+      fatigue: -6
+
+  - name: "《你好旧时光》辛夷坞"
+    price: 42
+    uses_per_unit: 3
+    description: "青春小说，好感度+5，疲惫-4"
+    effects:
+      affection: 5
+      fatigue: -4
+
+  - name: "《算法导论》第3版"
+    price: 128
+    uses_per_unit: 5
+    description: "程序员圣经，好感度+10"
+    effects:
+      affection: 10
+
+  - name: "进击的巨人全套漫画(1-34卷)"
+    price: 420
+    uses_per_unit: 5
+    description: "经典漫画全集，好感度+12"
+    effects:
+      affection: 12
+
+  - name: "《活着》余华"
+    price: 28
+    uses_per_unit: 3
+    description: "文学名著，好感度+4，疲惫-5"
+    effects:
+      affection: 4
+      fatigue: -5
+
+  # ===== 生活/日常类 =====
+  - name: "无印良品保温杯(500ml)"
+    price: 168
+    uses_per_unit: 90
+    description: "精致水杯，好感度+7"
+    effects:
+      affection: 7
+
+  - name: "飞利浦声波电动牙刷"
+    price: 249
+    uses_per_unit: 180
+    description: "护牙工具，健康+5，好感度+5"
+    effects:
+      health: 5
+      affection: 5
+
+  - name: "网易严选纯棉抱枕(50x50cm)"
+    price: 88
+    uses_per_unit: 90
+    description: "舒适抱枕，疲惫-15，好感度+4"
+    effects:
+      fatigue: -15
+      affection: 4
+
+  - name: "宜家鲨鱼抱枕(BLAHAJ大号)"
+    price: 99
+    uses_per_unit: 90
+    description: "网红鲨鱼，好感度+8，疲惫-8"
+    effects:
+      affection: 8
+      fatigue: -8
+
+  - name: "小熊电器桌面加湿器(超声波)"
+    price: 129
+    uses_per_unit: 90
+    description: "保湿神器，健康+4，疲惫-5"
+    effects:
+      health: 4
+      fatigue: -5
+
+  - name: "班尼路纯棉T恤(基础款)"
+    price: 59
+    uses_per_unit: 60
+    description: "舒适T恤，好感度+3"
+    effects:
+      affection: 3
+
+  - name: "优衣库法兰绒格纹睡衣套装"
+    price: 199
+    uses_per_unit: 60
+    description: "舒适睡衣，疲惫-12，好感度+6"
+    effects:
+      fatigue: -12
+      affection: 6
+
+  # ===== 手机/电脑/平板类 =====
+  - name: "Apple iPhone 16 Pro(256GB)"
+    price: 8999
+    uses_per_unit: 1
+    description: "旗舰iPhone，好感度+40，健康+5"
+    effects:
+      affection: 40
+      health: 5
+
+  - name: "小米15 Pro(512GB)"
+    price: 5999
+    uses_per_unit: 365
+    description: "国产旗舰，好感度+30"
+    effects:
+      affection: 30
+
+  - name: "华为Pura 70 Ultra(512GB)"
+    price: 9999
+    uses_per_unit: 365
+    description: "华为旗舰，好感度+35"
+    effects:
+      affection: 35
+
+  - name: "OPPO Find X8(256GB)"
+    price: 5499
+    uses_per_unit: 365
+    description: "OPPO旗舰，好感度+28"
+    effects:
+      affection: 28
+
+  - name: "Apple MacBook Air M3(13英寸)"
+    price: 9999
+    uses_per_unit: 365
+    description: "轻薄Mac本，好感度+45，疲惫-20"
+    effects:
+      affection: 45
+      fatigue: -20
+
+  - name: "联想ThinkPad X1 Carbon(i7 32G)"
+    price: 12999
+    uses_per_unit: 365
+    description: "商务神机，好感度+35，疲惫-15"
+    effects:
+      affection: 35
+      fatigue: -15
+
+  - name: "华硕ROG魔霸新锐2024游戏本"
+    price: 10999
+    uses_per_unit: 365
+    description: "游戏神机，好感度+40，疲惫-15"
+    effects:
+      affection: 40
+      fatigue: -15
+
+  - name: "Apple iPad Pro M4(11英寸 WiFi 256G)"
+    price: 8999
+    uses_per_unit: 365
+    description: "旗舰平板，好感度+35，疲惫-10"
+    effects:
+      affection: 35
+      fatigue: -10
+
+  - name: "小米平板6 Pro(256GB)"
+    price: 2999
+    uses_per_unit: 365
+    description: "高性价比平板，好感度+18，疲惫-8"
+    effects:
+      affection: 18
+      fatigue: -8
+
+  - name: "华为MatePad Pro 13.2英寸"
+    price: 5499
+    uses_per_unit: 365
+    description: "生产力平板，好感度+25，疲惫-10"
+    effects:
+      affection: 25
+      fatigue: -10
+
+  - name: "Samsung Galaxy S24 Ultra(256GB)"
+    price: 9999
+    uses_per_unit: 365
+    description: "安卓旗舰S Pen，好感度+32"
+    effects:
+      affection: 32
+
+  - name: "苹果Apple Watch Series 10"
+    price: 3499
+    uses_per_unit: 365
+    description: "智能手表，健康+10，好感度+20"
+    effects:
+      health: 10
+      affection: 20

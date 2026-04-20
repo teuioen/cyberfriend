@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  cyberfriend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cyberfriend
+    
+    # 环境变量配置
+    environment:
+      - NODE_ENV=production
+      - DATA_DIR=/app/data
+      - TZ=Asia/Shanghai
+      
+    # 数据卷挂载：持久化数据、日志、配置
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    
+    # 互动式运行（支持 stdin/stdout）
+    stdin_open: true
+    tty: true
+    
+    # 重启策略
+    restart: unless-stopped
+    
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # 资源限制（可选）
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M

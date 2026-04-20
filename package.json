@@ -1,0 +1,32 @@
+{
+  "name": "cyberfriend",
+  "version": "1.0.0",
+  "description": "CyberFriend 赛博朋友 — 具有真实生命感的AI系统",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.60.0",
+    "@types/ws": "^8.18.1",
+    "@wechatbot/wechatbot": "^2.1.0",
+    "axios": "^1.6.7",
+    "better-sqlite3": "^9.4.3",
+    "cheerio": "^1.2.0",
+    "gpt-tokenizer": "^3.4.0",
+    "js-yaml": "^4.1.0",
+    "openai": "^4.28.0",
+    "qrcode-terminal": "^0.12.0",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.11.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

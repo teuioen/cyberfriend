@@ -1,0 +1,200 @@
+# CyberFriend 应用配置模板
+# 复制此文件为 app.yaml 并填写你的配置
+# cp config/app.yaml.example config/app.yaml
+
+api:
+  # 全局默认端点（所有未单独配置的模型均使用此处设置）
+  baseUrl: "https://your-openai-compatible-endpoint/v1"
+  apiKey: "sk-xxxxxxxxxxxxxxxxxxxxxxxx"   # 本地模型可留空 ""
+  model: "your-default-model-name"        # 全局默认模型，main/mini/vision 不写时继承它
+  maxTokens: 8192
+  chatMaxTokens: 600        # 对话回复最大 token（控制回复简短）
+  temperature: 0.8
+  extraBody:                            # 通用额外参数
+    enable_thinking: false               # 全局关闭思考模式
+  # chatTemplateKwargs:                   # Llama.cpp GLM4.x .... 思考模式控制
+  #   enable_thinking: false
+  #   clear_thinking: false
+
+  # 主模型（对话、决策）
+  # 可直接指定单个模型，也可以使用 pool 定义多个候选实例（用于回退/混合部署）
+  # 若某模型不支持 chatTemplateKwargs 等参数，可在该模型处显式设置为 null 覆盖全局配置。
+  main:
+    # 单模型示例（直接指定）
+    # model: "your-main-model-name"        # 可选；不填则继承上面的 api.model
+    # baseUrl: "http://localhost:4000/v1"   # 独立端点（可选）
+    # apiKey: ""                            # 独立 Key（可选）
+    # extraBody:                            # 模型额外参数（可选）
+    #   enable_thinking: false              
+
+    # 或 使用 model pool（推荐）：
+    # 在端点处引用已命名的模型池，例如：
+    # pool: main_pool   # 指向下方 modelPools 中定义的 main_pool
+
+  # 小模型（摘要、压缩、梦境生成）— 省略则继承全局设置
+  mini:
+    #model: "your-mini-model-name"        # 可选；不填则继承上面的 api.model
+    #extraBody:
+    #  enable_thinking: false
+
+  # 视觉模型（图片理解）— 省略则继承全局设置
+  vision:
+    #model: "your-vision-model-name"      # 可选；不填则继承上面的 api.model
+
+  # ---- 模型池（Model Pools）示例与说明 ---------------------------------
+  # 支持为某个端点引用一个命名的模型池（便于回退、负载均衡或混合部署）
+  # 在端点处写: pool: pool_name
+  # modelPools 下每个池定义为：
+  #   strategy: random | fallback   # random 按权重随机；fallback 顺序回退
+  #   models:                       # models 列表，数组内每项可配置 model/baseUrl/apiKey/weight/chatTemplateKwargs 等
+  # 示例：
+  # modelPools:
+  #   main_pool:
+  #     strategy: random
+  #     models:
+  #       - model: "qwen3.5-plus"
+  #         weight: 5
+  #         baseUrl: "https://xxx.com/v1"
+  #       - model: "deepseek-ai/deepseek-v3.2"
+  #         weight: 3
+  #         chatTemplateKwargs: null   # 显式设为 null 覆盖全局设置（用于禁用不兼容参数）
+  #       - model: "local-llama"
+  #         weight: 1
+  #         baseUrl: "http://localhost:8080/v1"
+  # ---------------------------------------------------------------------
+
+heartbeat:
+  intervalMinutes: 30          # 默认心跳间隔（分钟）
+  minIntervalMinutes: 30       # 最短心跳间隔（不得低于30分钟）
+  maxIntervalMinutes: 480      # 最长心跳间隔（8小时）
+  newsFetchProbability: 0.35   # 每次心跳获取新闻的概率（0-1）
+  randomEventProbability: 0.2  # 每次心跳触发随机生活事件的概率（0-1）
+  systemNoticeToAllChannels: false  # 系统通知（睡觉/打工等状态）是否广播全部信道，默认仅 CLI
+  systemNoticeInCli: true           # 系统通知是否在 CLI 显示（默认开启）
+  diaryMinIntervalHours: 3          # 写日记最小间隔（小时），防止短时间重复写日记
+  diaryMaxPerDay: 3                 # 每天最多写几篇日记
+
+memory:
+  shortTermMaxAgeHours: 72     # 短期记忆最大保留时间（小时）
+  longTermDecayRatePerDay: 0.06 # 长期记忆每天重要度衰减率
+  importanceThreshold: 1.5     # 重要度低于此值时删除记忆
+  retrievalLimit: 24            # 提示词中最多包含的记忆条数；短期记忆摘要也会使用这个窗口
+  dreamMemoryTTLHours: 2      # 梦境记忆保留时长（小时），超期自动遗忘
+  blurThreshold1: 0.65         # 衰减因子低于此值时开始第一级模糊（轻度子句遮蔽）
+  blurThreshold2: 0.40         # 衰减因子低于此值时第二级模糊（中度子句遮蔽）
+  blurThreshold3: 0.20         # 衰减因子低于此值时第三级模糊（重度子句遮蔽）
+
+emotion:
+  decayRate: 0.08              # 每次心跳向中性基线衰减的比率
+  maxValue: 100.0
+  minValue: 0.0
+  neutralValue: 50.0           # 情绪中性基线：各情绪会逐渐向这个值回归
+  initialValues:               # 初始情绪；不写的维度会自动回退到 neutralValue
+    joy: 42.0                  # 喜悦：略低于中性，避免开局过于热情
+    sadness: 50.0              # 悲伤：50=中性，不代表一开始就难过
+    anxiety: 50.0              # 焦虑：50=中性，不代表一开始就焦虑
+    anger: 50.0                # 愤怒：50=中性，不代表一开始就生气
+    fear: 50.0                 # 恐惧：50=中性，不代表一开始就害怕
+    excitement: 45.0           # 兴奋：略低一点，避免开局太亢奋
+    disgust: 50.0              # 厌恶：50=中性
+    shame: 50.0                # 羞耻：50=中性
+    curiosity: 40.0            # 好奇：略低一点，避免开局太主动
+
+health:
+  dailyRecovery: 5.0           # 每天自然恢复健康值
+  fatigueDailyIncrease: 18.0   # 清醒状态下每天自然增加的疲惫
+  fatigueDailyRecovery: 6.0    # 清醒状态下每天自然恢复的疲惫
+  diseaseProbability: 0.06     # 每次心跳随机患病概率（0.06 = 6%）
+  sleepHealthBonus: 3.0        # 睡眠后健康值加成（乘以睡眠质量系数）
+  sleepFatigueMinus: 30.0      # 睡眠后疲惫减少量
+  initialValues:               # 初始健康/疲惫
+    healthValue: 100.0
+    fatigue: 0.0
+
+context:
+  maxMessages: 50              # 超过此数量触发对话历史压缩
+  compressionKeepRecent: 16    # 压缩后保留最近的消息数量
+  compressionKeepFirst: 0      # 保留最早的N条消息永不压缩（0=禁用，可设为3~5保留初次见面对话）
+  timeMarkerIntervalMinutes: 5 # 对话间隔超过此分钟数时，向AI注入一条系统时间标记
+
+message:
+  minDelayMs: 500              # 分段消息最短发送延迟（毫秒）
+  maxDelayMs: 3000             # 分段消息最长发送延迟（毫秒）
+  typingSpeedCharsPerSec: 8    # 模拟打字速度（字/秒），影响延迟计算
+
+economy:
+  dailyCurrencyUser: 50        # 系统每天发给对方的虚拟货币
+  dailyCurrencyAi: 0           # 系统每天发给你的虚拟货币
+
+relationship:
+  initialAffection: 5.0       # 初始好感度（角色开局对对方的亲近程度）
+  affectionDecayPerDay: 0.5    # 长时间不互动时，每天自然衰减的好感度
+
+sleep:
+  startHour: 22                # 可能开始入睡的时刻（24小时制，22=22:00）
+  endHour: 7                   # 睡眠结束的最晚时刻（7=07:00）
+  minDurationHours: 1          # 最短睡眠时长（小时）
+  maxDurationHours: 8          # 最长睡眠时长（小时）
+  dreamProbability: 0.4        # 每次心跳触发梦境的概率（0.4 = 40%）
+  fatigueSleepThreshold: 72    # 疲惫达到该值后，会在心跳决策里优先考虑睡觉
+  fatigueForceSleepThreshold: 90  # 疲惫达到该值后，系统会直接强制睡觉
+
+work:
+  earningPerHour: 60           # 打工每小时收益（虚拟币）
+  maxHours: 72                 # 单次最长打工时长（小时）
+  fatiguePerHour: 8            # 打工每小时额外增加的疲惫值
+
+news:
+  enabled: true                # 是否启用新闻系统（节省token可改为false）
+  fetchIntervalHours: 4        # 新闻刷新间隔（小时）
+  maxItems: 10                 # 每次最多获取条数
+  sources:                     # RSS源（可自定义）
+    - "https://news.ycombinator.com/rss"                # Hacker News
+    - "https://feeds.arstechnica.com/arstechnica/index" # Ars Technica
+    - "https://www.ruanyifeng.com/blog/atom.xml"        # 阮一峰的网络日志
+    - "https://sspai.com/feed"                          # 少数派
+    - "https://www.v2ex.com/feed/tab/tech.xml"          # V2EX 技术
+    - "https://coolshell.cn/feed"                       # 酷壳
+
+database:
+  path: "./data/cyberfriend.db"   # 数据库文件路径（自动创建）
+
+# 信道配置
+channels:
+  # 启用的信道（可多选）: cli / wechat / feishu / qq
+  enabled:
+    - cli
+
+  # 微信信道(扫码绑定)
+  wechat:
+    targetUserId: ""                     # 留空=绑定首个发消息的用户，可以不管
+    storageDir: "./data/wechat-session"  # 登录凭证保存目录
+    logLevel: "warn"                     # debug / info / warn / error / silent
+
+  # 飞书信道（在飞书开发者后台创建应用获取以下凭证）
+  feishu:
+    appId: "cli_xxxxxxxxxxxxxxxx"
+    appSecret: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    targetUserId: ""                     # 留空=绑定首个发消息的用户
+
+  # QQ 官方机器人信道（在 https://bot.q.qq.com 申请）
+  qq:
+    appId: "102xxxxxxxx"
+    appSecret: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  # 机器人密钥（非废弃的Token）
+    targetOpenId: ""                               # 留空=绑定首个发私信/C2C消息的用户，可以不管
+    sandbox: false                                 # 测试期间设为 true
+
+log:
+  level: "info"                # 日志级别: debug / info / warn / error
+  showTimestamp: true
+  logDir: "./data/logs"             # 日志文件目录（留空则不写文件）
+  retentionDays: 30            # 日志文件保留天数
+
+# 天气系统（使用 wttr.in 免费接口，无需 API Key）
+weather:
+  enabled: true
+  city: "Beijing"              # 城市名（英文）
+  fetchIntervalMinutes: 120     # 天气缓存时间（分钟）
+
+# 显示已执行的行动摘要（如"✨ 情绪 → anger:+3"）
+showActionSummary: true
