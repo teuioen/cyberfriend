@@ -25,6 +25,9 @@ export class CLIChannel extends BaseChannel {
   private lastTimeMarkerTime = 0;
   private timeMarkerIntervalMs = 5 * 60 * 1000;  // 5分钟显示一次时间分割线
 
+  // 当前批次已发送消息数（用于决定首条消息是否加空行前缀）
+  private batchMessageCount = 0;
+
   // 命令注册表（备用，实际已通过 messageHandler 统一分发）
   private commands: Map<string, (args: string[]) => Promise<string | void>> = new Map();
 
@@ -57,7 +60,7 @@ export class CLIChannel extends BaseChannel {
   }
 
   /** 显示时间分割线（如果距离上次显示超过了间隔） */
-  private showTimeMarkerIfNeeded(): void {
+  showTimeMarkerIfNeeded(): void {
     const now = Date.now();
     if (now - this.lastTimeMarkerTime >= this.timeMarkerIntervalMs) {
       const d = new Date(now);
@@ -67,7 +70,7 @@ export class CLIChannel extends BaseChannel {
       const hours = String(d.getHours()).padStart(2, '0');
       const minutes = String(d.getMinutes()).padStart(2, '0');
       const timestamp = `${year}-${month}-${day} ${hours}:${minutes}`;
-      this.writeLine(`\n\x1b[2m━━ ${timestamp} ━━\x1b[0m`);
+      this.writeLine(`\x1b[2m━━ ${timestamp} ━━\x1b[0m`);
       this.lastTimeMarkerTime = now;
     }
   }
@@ -81,8 +84,8 @@ export class CLIChannel extends BaseChannel {
     readline.clearLine(process.stdout, 0);
     readline.cursorTo(process.stdout, 0);
     process.stdout.write(text + '\n');
-    // 非批量发送且非命令处理期间，重新显示输入提示符
-    if (this.running && !this.isSendingBatch && !this.insideLineHandler) {
+    // 非批量发送且非命令处理期间且无指示器时，重新显示输入提示符
+    if (this.running && !this.isSendingBatch && !this.insideLineHandler && !this.processingTimer) {
       this.rl.prompt(true);
     }
   }
@@ -214,7 +217,10 @@ export class CLIChannel extends BaseChannel {
     if (!this.isSendingBatch) {
       this.showTimeMarkerIfNeeded();
     }
-    this.writeLine(`\n\x1b[36m${this.charName}\x1b[0m: ${text}`);
+    // 批次第一条消息直接替换 💬 指示符（无空行前缀）；后续消息加空行分隔
+    const prefix = (this.isSendingBatch && this.batchMessageCount === 0) ? '' : '\n';
+    if (this.isSendingBatch) this.batchMessageCount++;
+    this.writeLine(`${prefix}\x1b[36m${this.charName}\x1b[0m: ${text}`);
   }
 
   async sendNotice(text: string): Promise<void> {
@@ -224,6 +230,7 @@ export class CLIChannel extends BaseChannel {
   /** 批量发送前：标记批次开始，显示时间分割线，切换为"正在输入中..." */
   protected beforeBatch(): void {
     this.isSendingBatch = true;
+    this.batchMessageCount = 0;
     this.showTimeMarkerIfNeeded();
     this.startProcessing();
   }
@@ -239,31 +246,40 @@ export class CLIChannel extends BaseChannel {
   startWaiting(): void {
     this.stopProcessing(); // 清除旧计时器（防重复）
     this.processingStart = Date.now();
-    readline.clearLine(process.stdout, 0);
-    readline.cursorTo(process.stdout, 0);
-    process.stdout.write('\x1b[2m⏳ 等待中...\x1b[0m');
+    const writeWait = () => {
+      readline.clearLine(process.stdout, 0);
+      readline.cursorTo(process.stdout, 0);
+      process.stdout.write('\x1b[2m⏳ 等待中...\x1b[0m');
+    };
+    writeWait();
+    // 延迟一个微任务：确保在 readline 的 _refreshLine() 重绘提示符后，我们的指示器仍然显示
     this.processingTimer = setInterval(() => {
       const secs = ((Date.now() - this.processingStart) / 1000).toFixed(1);
       readline.clearLine(process.stdout, 0);
       readline.cursorTo(process.stdout, 0);
       process.stdout.write(`\x1b[2m⏳ 等待中... (${secs}s)\x1b[0m`);
     }, 200);
+    queueMicrotask(() => { if (this.processingTimer) writeWait(); });
   }
 
   /** 显示"正在输入中"动态计时（收到回复后、发送消息前）*/
   startProcessing(): void {
     this.stopProcessing(); // 清除旧计时器（防重复）
     this.processingStart = Date.now();
+    const writeProc = () => {
+      readline.clearLine(process.stdout, 0);
+      readline.cursorTo(process.stdout, 0);
+      process.stdout.write('\x1b[2m💬 正在输入中...\x1b[0m');
+    };
     // 不用 writeLine（不加换行），这样计时器可以在同一行原地覆盖更新
-    readline.clearLine(process.stdout, 0);
-    readline.cursorTo(process.stdout, 0);
-    process.stdout.write('\x1b[2m💬 正在输入中...\x1b[0m');
+    writeProc();
     this.processingTimer = setInterval(() => {
       const secs = ((Date.now() - this.processingStart) / 1000).toFixed(1);
       readline.clearLine(process.stdout, 0);
       readline.cursorTo(process.stdout, 0);
       process.stdout.write(`\x1b[2m💬 正在输入中... (${secs}s)\x1b[0m`);
     }, 200);
+    queueMicrotask(() => { if (this.processingTimer) writeProc(); });
   }
 
   /** 清除"处理中"提示 */

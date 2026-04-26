@@ -1,6 +1,6 @@
 {
   "name": "cyberfriend",
-  "version": "1.0.0",
+  "version": "1.0.0-alpha.1",
   "description": "CyberFriend 赛博朋友 — 具有真实生命感的AI系统",
   "main": "dist/index.js",
   "scripts": {

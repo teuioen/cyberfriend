@@ -5,11 +5,15 @@ import * as fs from 'fs';
 // ===== 类型定义 =====
 export interface Message {
   id?: number;
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
   contentVisible?: string;
   timestamp: number;
   compressed?: number;
+  /** JSON-serialized OpenAIToolCall[] for assistant(tool_calls) messages */
+  toolCalls?: string;
+  /** tool_call_id for tool role messages */
+  toolCallId?: string;
 }
 
 export interface Memory {
@@ -34,6 +38,7 @@ export interface HealthRow {
   healthValue: number; fatigue: number;
   disease: string | null; diseaseDuration: number;
   psychologyState: string; psychologyDuration: number;
+  hunger: number;
   updatedAt: number;
 }
 
@@ -322,6 +327,22 @@ export class Database {
     } catch {
       // 忽略迁移错误
     }
+
+    // 迁移：health 表添加 hunger 列
+    try { this.db.exec("ALTER TABLE health ADD COLUMN hunger REAL NOT NULL DEFAULT 80"); } catch {}
+
+    // 迁移：messages 表添加 tool_calls 和 tool_call_id 列
+    try {
+      const msgCols = this.db.prepare(`PRAGMA table_info(messages)`).all() as any[];
+      if (!msgCols.some(c => c.name === 'tool_calls')) {
+        this.db.exec(`ALTER TABLE messages ADD COLUMN tool_calls TEXT`);
+      }
+      if (!msgCols.some(c => c.name === 'tool_call_id')) {
+        this.db.exec(`ALTER TABLE messages ADD COLUMN tool_call_id TEXT`);
+      }
+    } catch {
+      // 忽略迁移错误
+    }
   }
 
   private ensureDefaultRows(): void {
@@ -451,31 +472,41 @@ export class Database {
   // ===== 消息操作 =====
   saveMessage(msg: Message): number {
     const r = this.db.prepare(
-      `INSERT INTO messages(role,content,content_visible,timestamp,compressed)
-       VALUES(?,?,?,?,?)`
-    ).run(msg.role, msg.content, msg.contentVisible ?? msg.content, msg.timestamp, msg.compressed ?? 0);
+      `INSERT INTO messages(role,content,content_visible,timestamp,compressed,tool_calls,tool_call_id)
+       VALUES(?,?,?,?,?,?,?)`
+    ).run(
+      msg.role,
+      msg.content,
+      msg.contentVisible ?? msg.content,
+      msg.timestamp,
+      msg.compressed ?? 0,
+      msg.toolCalls ?? null,
+      msg.toolCallId ?? null
+    );
     return Number(r.lastInsertRowid);
   }
 
   getMessages(limit = 50, excludeCompressed = false): Message[] {
     const where = excludeCompressed ? 'WHERE compressed=0' : '';
     const rows = this.db.prepare(
-      `SELECT id,role,content,content_visible,timestamp,compressed FROM messages ${where} ORDER BY timestamp DESC LIMIT ?`
+      `SELECT id,role,content,content_visible,timestamp,compressed,tool_calls,tool_call_id FROM messages ${where} ORDER BY id DESC LIMIT ?`
     ).all(limit) as any[];
     return rows.reverse().map(r => ({
       id: r.id, role: r.role, content: r.content,
-      contentVisible: r.content_visible, timestamp: r.timestamp, compressed: r.compressed
+      contentVisible: r.content_visible, timestamp: r.timestamp, compressed: r.compressed,
+      toolCalls: r.tool_calls, toolCallId: r.tool_call_id
     }));
   }
 
   /** 获取全部未压缩消息（按时间正序），用于压缩逻辑 */
   getAllUncompressedMessages(): Message[] {
     const rows = this.db.prepare(
-      `SELECT id,role,content,content_visible,timestamp FROM messages WHERE compressed=0 ORDER BY timestamp ASC`
+      `SELECT id,role,content,content_visible,timestamp,tool_calls,tool_call_id FROM messages WHERE compressed=0 ORDER BY timestamp ASC`
     ).all() as any[];
     return rows.map(r => ({
       id: r.id, role: r.role, content: r.content,
-      contentVisible: r.content_visible, timestamp: r.timestamp
+      contentVisible: r.content_visible, timestamp: r.timestamp,
+      toolCalls: r.tool_calls, toolCallId: r.tool_call_id
     }));
   }
 
@@ -546,6 +577,13 @@ export class Database {
   deleteMessage(id: number): boolean {
     const r = this.db.prepare('DELETE FROM messages WHERE id=?').run(id);
     return r.changes > 0;
+  }
+
+  /** 删除所有工具调用相关消息（role='tool' 及含 tool_calls 的 assistant 消息） */
+  deleteToolCallMessages(): number {
+    const r1 = this.db.prepare(`DELETE FROM messages WHERE role='tool'`).run();
+    const r2 = this.db.prepare(`DELETE FROM messages WHERE role='assistant' AND tool_calls IS NOT NULL`).run();
+    return r1.changes + r2.changes;
   }
 
   // ===== 记忆操作 =====
@@ -744,6 +782,7 @@ export class Database {
       healthValue: r.health_value, fatigue: r.fatigue,
       disease: r.disease, diseaseDuration: r.disease_duration,
       psychologyState: r.psychology_state, psychologyDuration: r.psychology_duration,
+      hunger: r.hunger ?? 80,
       updatedAt: r.updated_at
     };
   }
@@ -752,7 +791,8 @@ export class Database {
     const map: Record<string, string> = {
       healthValue: 'health_value', fatigue: 'fatigue',
       disease: 'disease', diseaseDuration: 'disease_duration',
-      psychologyState: 'psychology_state', psychologyDuration: 'psychology_duration'
+      psychologyState: 'psychology_state', psychologyDuration: 'psychology_duration',
+      hunger: 'hunger'
     };
     const entries = Object.entries(h).filter(([k]) => k !== 'updatedAt' && map[k]);
     if (!entries.length) return;

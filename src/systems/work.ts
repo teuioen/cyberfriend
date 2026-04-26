@@ -8,7 +8,7 @@ import { HealthSystem } from './health';
 import { logger } from '../utils/logger';
 
 export interface WorkConfig {
-  earningPerHour: number;    // 每小时收益（虚拟币）
+  earningPerHour: number;    // 每小时收益（元）
   maxHours: number;          // 单次最大打工时长（小时）
   fatiguePerHour?: number;   // 每小时额外增加的疲惫值
 }
@@ -45,7 +45,7 @@ export class WorkSystem {
       earningRate: this.cfg.earningPerHour
     });
 
-    logger.info(`[Work] Ta开始打工，时长 ${hours}h，预计收益 ${Math.round(hours * this.cfg.earningPerHour)} 虚拟币`);
+    logger.info(`[Work] Ta开始打工，时长 ${hours}h，预计收益 ${Math.round(hours * this.cfg.earningPerHour)} 元`);
     return {
       endTime: new Date(endTime),
       durationHours: hours,
@@ -69,7 +69,7 @@ export class WorkSystem {
     if (fatigueGain > 0) this.healthSys.adjust({ fatigue: fatigueGain });
     this.db.updateWorkState({ isWorking: 0, workStart: null, endTime: null });
 
-    logger.info(`[Work] Ta打工结束，赚了 ${earned} 虚拟币，疲惫 +${Math.round(fatigueGain)}`);
+    logger.info(`[Work] Ta打工结束，赚了 ${earned} 元，疲惫 +${Math.round(fatigueGain)}`);
     return { earned, hours };
   }
 
@@ -86,8 +86,8 @@ export class WorkSystem {
     const hours = Math.floor(remaining / 3600000);
     const mins = Math.floor((remaining % 3600000) / 60000);
     const expectedEarning = Math.round((state.durationHours ?? 1) * (state.earningRate ?? this.cfg.earningPerHour));
-    if (hours > 0) return `还有约 ${hours}h${mins}m 结束，预计收益 ${expectedEarning} 虚拟币`;
-    return `还有约 ${mins} 分钟结束，预计收益 ${expectedEarning} 虚拟币`;
+    if (hours > 0) return `还有约 ${hours}h${mins}m 结束，预计收益 ${expectedEarning} 元`;
+    return `还有约 ${mins} 分钟结束，预计收益 ${expectedEarning} 元`;
   }
 
   /** 获取打工结束时间（Date），打工中才有效 */

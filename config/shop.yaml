@@ -1,6 +1,6 @@
 # ===== 商店配置 =====
 # uses_per_unit: 每次购买可使用次数（默认1）
-# effects: health/fatigue/affection/cure_disease
+# effects: health/fatigue/affection/cure_disease/hunger（hunger为饥饿值）
 
 # 以下所有商品由AI生成，合不合理我也不知道......自己改去。。。
 
@@ -123,119 +123,135 @@ items:
   - name: "乐事波浪薯片(原味大桶)"
     price: 16
     uses_per_unit: 3
-    description: "经典薯片，好感度+2"
+    description: "经典薯片，好感度+2，饥饿值+6"
     effects:
       affection: 2
+      hunger: 6
 
   - name: "奥利奥夹心饼干(388g)"
     price: 22
     uses_per_unit: 8
-    description: "好吃的饼干，好感度+2，疲惫-5（约8次享用）"
+    description: "好吃的饼干，好感度+2，疲惫-5，饥饿值+7（约8次享用）"
     effects:
       affection: 2
       fatigue: -5
+      hunger: 7
 
   - name: "旺旺雪饼(大礼包)"
     price: 18
     uses_per_unit: 5
-    description: "童年零食，好感度+2"
+    description: "童年零食，好感度+2，饥饿值+6"
     effects:
       affection: 2
+      hunger: 6
 
   - name: "Toblerone三角巧克力(100g)"
     price: 35
     uses_per_unit: 4
-    description: "瑞士进口，好感度+3（约4次享用）"
+    description: "瑞士进口，好感度+3，饥饿值+5（约4次享用）"
     effects:
       affection: 3
+      hunger: 5
 
   - name: "费列罗巧克力(16粒)"
     price: 68
     uses_per_unit: 16
-    description: "高档巧克力礼盒，好感度+6"
+    description: "高档巧克力礼盒，好感度+6，饥饿值+8"
     effects:
       affection: 6
+      hunger: 8
 
   - name: "卡乐比麦片(800g)"
     price: 48
     uses_per_unit: 16
-    description: "健康早餐，健康+5，疲惫-5（约16份，每份50g）"
+    description: "健康早餐，健康+5，疲惫-5，饥饿值+12（约16份，每份50g）"
     effects:
       health: 5
       fatigue: -5
+      hunger: 12
 
   - name: "良品铺子坚果大礼包(500g)"
     price: 58
     uses_per_unit: 10
-    description: "健康坚果，健康+6，好感度+3（约10份）"
+    description: "健康坚果，健康+6，好感度+3，饥饿值+10（约10份）"
     effects:
       health: 6
       affection: 3
+      hunger: 10
 
   - name: "三只松鼠零食大礼包"
     price: 79
     uses_per_unit: 5
-    description: "多种零食，好感度+5（约5小包）"
+    description: "多种零食，好感度+5，饥饿值+8（约5小包）"
     effects:
       affection: 5
+      hunger: 8
 
   - name: "旺旺仙贝(大包)"
     price: 12
     uses_per_unit: 3
-    description: "膨化零食，好感度+1"
+    description: "膨化零食，好感度+1，饥饿值+5"
     effects:
       affection: 1
+      hunger: 5
 
   - name: "卫龙大面筋(辣条豪华版)"
     price: 15
     uses_per_unit: 3
-    description: "辣条零食，好感度+2"
+    description: "辣条零食，好感度+2，饥饿值+5"
     effects:
       affection: 2
+      hunger: 5
 
   - name: "日本进口草莓糖(200g)"
     price: 42
     uses_per_unit: 10
-    description: "进口软糖，好感度+3（约10次享用）"
+    description: "进口软糖，好感度+3，饥饿值+4（约10次享用）"
     effects:
       affection: 3
+      hunger: 4
 
   - name: "百草味蜂蜜手撕面包(整箱)"
     price: 35
     uses_per_unit: 8
-    description: "软糯面包，疲惫-8，好感度+2（约8包）"
+    description: "软糯面包，疲惫-8，好感度+2，饥饿值+10（约8包）"
     effects:
       fatigue: -8
       affection: 2
+      hunger: 10
 
   - name: "德芙丝滑牛奶巧克力(252g)"
     price: 28
     uses_per_unit: 7
-    description: "丝滑巧克力，好感度+4（约7份）"
+    description: "丝滑巧克力，好感度+4，饥饿值+6（约7份）"
     effects:
       affection: 4
+      hunger: 6
 
   - name: "乌江涪陵榨菜(330g)"
     price: 8
     uses_per_unit: 10
-    description: "下饭神器，健康+2（约10份）"
+    description: "下饭神器，健康+2，饥饿值+3（约10份）"
     effects:
       health: 2
+      hunger: 3
 
   # ===== 饮料类 =====
   - name: "红牛功能饮料(250ml×6罐)"
     price: 58
     uses_per_unit: 6
-    description: "快速提神，疲惫-25"
+    description: "快速提神，疲惫-25，饥饿值+2"
     effects:
       fatigue: -25
+      hunger: 2
 
   - name: "元气森林白桃气泡水(500ml×6瓶)"
     price: 38
     uses_per_unit: 6
-    description: "无糖好喝，疲惫-10"
+    description: "无糖好喝，疲惫-10，饥饿值+1"
     effects:
       fatigue: -10
+      hunger: 1
 
   - name: "农夫山泉天然水(550ml×24瓶)"
     price: 28
@@ -243,22 +259,25 @@ items:
     description: "日常补水，健康+4"
     effects:
       health: 4
+      hunger: 0
 
   - name: "脉动维C饮料(600ml×6瓶)"
     price: 32
     uses_per_unit: 6
-    description: "运动饮料，健康+5，疲惫-8"
+    description: "运动饮料，健康+5，疲惫-8，饥饿值+2"
     effects:
       health: 5
       fatigue: -8
+      hunger: 2
 
   - name: "娃哈哈AD钙奶(220ml×20瓶)"
     price: 35
     uses_per_unit: 20
-    description: "童年回忆，健康+5，好感度+3"
+    description: "童年回忆，健康+5，好感度+3，饥饿值+5"
     effects:
       health: 5
       affection: 3
+      hunger: 5
 
   - name: "怡宝纯净水(550ml×24瓶)"
     price: 22
@@ -266,134 +285,152 @@ items:
     description: "日常饮用水，健康+3"
     effects:
       health: 3
+      hunger: 0
 
   - name: "可口可乐(330ml×6罐)"
     price: 25
     uses_per_unit: 6
-    description: "经典可乐，疲惫-8"
+    description: "经典可乐，疲惫-8，饥饿值+2"
     effects:
       fatigue: -8
+      hunger: 2
 
   - name: "伊利纯牛奶(250ml×12盒)"
     price: 48
     uses_per_unit: 12
-    description: "补充营养，健康+8"
+    description: "补充营养，健康+8，饥饿值+6"
     effects:
       health: 8
+      hunger: 6
 
   # ===== 奶茶/咖啡类 =====
   - name: "喜茶芝芝莓莓(大杯)"
     price: 32
     uses_per_unit: 1
-    description: "网红奶茶，疲惫-12，好感度+2"
+    description: "网红奶茶，疲惫-12，好感度+2，饥饿值+6"
     effects:
       fatigue: -12
       affection: 2
+      hunger: 6
 
   - name: "星巴克馥芮白(Grande)"
     price: 38
     uses_per_unit: 1
-    description: "精品咖啡，疲惫-18"
+    description: "精品咖啡，疲惫-18，饥饿值+2"
     effects:
       fatigue: -18
+      hunger: 2
 
   - name: "瑞幸生椰拿铁(大杯)"
     price: 22
     uses_per_unit: 1
-    description: "瑞幸招牌，疲惫-15"
+    description: "瑞幸招牌，疲惫-15，饥饿值+2"
     effects:
       fatigue: -15
+      hunger: 2
 
   - name: "奈雪的茶霸气芝士草莓(大杯)"
     price: 35
     uses_per_unit: 1
-    description: "网红茶饮，疲惫-12，好感度+2"
+    description: "网红茶饮，疲惫-12，好感度+2，饥饿值+6"
     effects:
       fatigue: -12
       affection: 2
+      hunger: 6
 
   - name: "蜜雪冰城柠檬水(大杯)"
     price: 6
     uses_per_unit: 1
-    description: "平价好喝，疲惫-6"
+    description: "平价好喝，疲惫-6，饥饿值+4"
     effects:
       fatigue: -6
+      hunger: 4
 
   - name: "麦当劳麦咖啡拿铁(中杯)"
     price: 18
     uses_per_unit: 1
-    description: "快餐咖啡，疲惫-12"
+    description: "快餐咖啡，疲惫-12，饥饿值+2"
     effects:
       fatigue: -12
+      hunger: 2
 
   - name: "雀巢速溶咖啡(12条装)"
     price: 20
     uses_per_unit: 12
-    description: "居家咖啡，疲惫-10"
+    description: "居家咖啡，疲惫-10，饥饿值+2"
     effects:
       fatigue: -10
+      hunger: 2
 
   # ===== 正餐/外卖类 =====
   - name: "肯德基炸鸡桶(8块装)"
     price: 69
     uses_per_unit: 8
-    description: "经典炸鸡，健康+6，疲惫-15"
+    description: "经典炸鸡，健康+6，疲惫-15，饥饿值+20"
     effects:
       health: 6
       fatigue: -15
+      hunger: 20
 
   - name: "麦当劳双层牛堡套餐"
     price: 36
     uses_per_unit: 1
-    description: "快餐套餐，健康+5，疲惫-10"
+    description: "快餐套餐，健康+5，疲惫-10，饥饿值+15"
     effects:
       health: 5
       fatigue: -10
+      hunger: 15
 
   - name: "必胜客双人分享餐"
     price: 99
     uses_per_unit: 1
-    description: "约饭套餐，健康+12，好感度+3"
+    description: "约饭套餐，健康+12，好感度+3，饥饿值+18"
     effects:
       health: 12
       affection: 3
+      hunger: 18
 
   - name: "好利来芋泥波波蛋糕(6寸)"
     price: 78
     uses_per_unit: 6
-    description: "网红蛋糕，好感度+5（6块）"
+    description: "网红蛋糕，好感度+5，饥饿值+12（6块）"
     effects:
       affection: 5
+      hunger: 12
 
   - name: "海底捞火锅外卖双人套餐"
     price: 188
     uses_per_unit: 1
-    description: "网红火锅，健康+15，好感度+6"
+    description: "网红火锅，健康+15，好感度+6，饥饿值+28"
     effects:
       health: 15
       affection: 6
+      hunger: 28
 
   - name: "沙县小吃蒸饺+米饭套餐"
     price: 12
     uses_per_unit: 1
-    description: "实惠小吃，健康+5"
+    description: "实惠小吃，健康+5，饥饿值+10"
     effects:
       health: 5
+      hunger: 10
 
   - name: "杨国福麻辣烫(中份)"
     price: 25
     uses_per_unit: 1
-    description: "麻辣烫，健康+6，疲惫-5"
+    description: "麻辣烫，健康+6，疲惫-5，饥饿值+14"
     effects:
       health: 6
       fatigue: -5
+      hunger: 14
 
   - name: "外婆家传统腊肉饭盒"
     price: 32
     uses_per_unit: 1
-    description: "家常美食，健康+8"
+    description: "家常美食，健康+8，饥饿值+12"
     effects:
       health: 8
+      hunger: 12
 
   # ===== 礼物/鲜花类 =====
   - name: "进口玫瑰花束(11朵)"

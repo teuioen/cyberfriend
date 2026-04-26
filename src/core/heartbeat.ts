@@ -29,10 +29,16 @@ export class HeartbeatManager {
   private nextIntervalMs: number;
   private isRunning = false;
   private aiCallActive = false;  // AI调用锁，防止并发调用
+  private lastAiBusyLogTime = 0;
+  private getLastInteractionTime?: () => number;
 
   /** 外部（callAI）通知心跳：当前是否有AI调用正在进行，避免双重输出 */
   setExternalAIBusy(busy: boolean): void {
     this.aiCallActive = busy;
+  }
+
+  setLastInteractionGetter(fn: () => number): void {
+    this.getLastInteractionTime = fn;
   }
 
   constructor(
@@ -118,8 +124,8 @@ export class HeartbeatManager {
                 logger.info(`[TaskWatcher] AI正忙，打工结束消息稍后处理`);
                 return;
               }
-              logger.info(`[TaskWatcher] Ta打工结束，赚了 ${workEnd.earned} 虚拟币`);
-              this.memorySys.save('short', `打工结束，赚了 ${workEnd.earned} 虚拟币`, 4);
+              logger.info(`[TaskWatcher] Ta打工结束，赚了 ${workEnd.earned} 元`);
+              this.memorySys.save('short', `打工结束，赚了 ${workEnd.earned} 元`, 4);
               this.aiCallActive = true;
               try { await this.handleWorkEnd(workEnd.hours, workEnd.earned); } finally { this.aiCallActive = false; }
             }
@@ -167,7 +173,11 @@ export class HeartbeatManager {
           // 7. AI 任务：需要等 AI 空闲才能触发
           if (aiTaskNames.length > 0) {
             if (this.aiCallActive) {
-              logger.info(`[TaskWatcher] AI正忙，${aiTaskNames.length} 个AI任务延迟到下次检查`);
+              const now = Date.now();
+              if (now - this.lastAiBusyLogTime > 60_000) {
+                logger.info(`[TaskWatcher] AI正忙，${aiTaskNames.length} 个AI任务延迟到下次检查`);
+                this.lastAiBusyLogTime = now;
+              }
               return;  // AI 忙，跳过本次，等下次心跳再试
             }
             
@@ -217,7 +227,7 @@ export class HeartbeatManager {
     const hours = state?.durationHours ?? 1;
     const earned = Math.round(hours * (state?.earningRate ?? 10));
     this.workSys.forceStop();
-    this.memorySys.save('short', `打工结束，赚了 ${earned} 虚拟币`, 4);
+    this.memorySys.save('short', `打工结束，赚了 ${earned} 元`, 4);
     this.handleWorkEnd(hours, earned).catch(e => logger.error(`[Heartbeat] forceWorkEnd 错误: ${e}`));
   }
 
@@ -360,15 +370,31 @@ export class HeartbeatManager {
 
     // 构建心跳用户消息：区分定时任务触发 vs 自由时间
     let heartbeatMsg: string;
+
+    // 用户不活跃时长提示
+    let inactivityNote = '';
+    if (this.getLastInteractionTime) {
+      const lastInteract = this.getLastInteractionTime();
+      if (lastInteract > 0) {
+        const minutesInactive = Math.floor((Date.now() - lastInteract) / 60_000);
+        if (minutesInactive >= 60) {
+          const hoursInactive = Math.floor(minutesInactive / 60);
+          inactivityNote = ` 对方已有 ${hoursInactive > 0 ? hoursInactive + '小时' : ''}${minutesInactive % 60}分钟未发消息。`;
+        }
+      }
+    }
+
     if (triggeredTasks.length > 0) {
       heartbeatMsg = `[系统心跳 ${formatCurrentTime()}] 以下定时任务已到触发时间，请根据任务内容做出相应行动：\n${triggeredTasks.map(t => `· ${t}`).join('\n')}${eventNote}${newsNote}`;
     } else {
-      heartbeatMsg = `[系统心跳 ${formatCurrentTime()}] 根据当前状态，决定做什么：可以主动联系对方、写日记、工作、或者什么都不做。${diaryNudge}${eventNote}${newsNote}`;
+      heartbeatMsg = `[系统心跳 ${formatCurrentTime()}] 根据当前状态，决定做什么：可以主动联系对方、写日记、工作、或者什么都不做。${diaryNudge}${inactivityNote}${eventNote}${newsNote}`;
     }
 
-    const messages = [
+    const messages: any[] = [
       { role: 'system' as const, content: fullSystemPrompt },
-      ...history.slice(-16),  // 心跳时只带最近14条历史
+      // 时间/状态/记忆独立注入为第一条 assistant 消息（保持 system 稳定以利 cache）
+      { role: 'assistant' as const, content: this.promptBuilder.buildHeartbeatContextMessage() },
+      ...history.slice(-16),  // 心跳时只带最近16条历史
       {
         role: 'user' as const,
         content: heartbeatMsg
@@ -417,10 +443,12 @@ export class HeartbeatManager {
 
   private async generateDream(): Promise<void> {
     try {
-      const recentMems = this.memorySys.getShortTermSummary();
+      // 40% 概率生成与现实无关的自由梦境，使梦境多样化
+      const freeform = Math.random() < 0.4;
+      const recentMems = freeform ? '' : this.memorySys.getShortTermSummary();
       const emoSummary = this.emotionSys.toPromptString();
       const mood = this.emotionSys.getMoodTag();
-      const { content, type } = await this.ai.generateDream(recentMems, emoSummary, mood);
+      const { content, type } = await this.ai.generateDream(recentMems, emoSummary, mood, freeform);
       this.sleepSys.saveDream(content, type);
       // 同步写入短期记忆，让后续对话中能感知到这段梦境
       this.memorySys.save('short', `[梦境] ${content}`, 3);
@@ -510,13 +538,13 @@ export class HeartbeatManager {
     const pendingMsgs = this.contextManager.getPendingUserMessages();
     const hasPendingMsg = pendingMsgs.length > 0;
     const pendingNote = hasPendingMsg
-      ? `对方在你打工期间发来了 ${pendingMsgs.length} 条消息，请看看并自然地回应（也可以顺带提一下刚打工回来），或者用 <SILENT> 暂时不回。`
-      : `你刚打工结束，可以发一条消息告诉对方，也可以 <NO_ACTION> 自己休息一下。`;
+      ? `对方在你打工期间发来了 ${pendingMsgs.length} 条消息。`
+      : `你刚打工结束，你可以休息一下。`;
 
     const response = await this.ai.chat([
       { role: 'system', content: systemPrompt },
       ...pendingMsgs,
-      { role: 'user', content: `[系统提示 ${formatCurrentTime()}] 你刚打工结束，干了 ${hours.toFixed(1)}h，赚到 ${earned} 虚拟币。${pendingNote}` }
+      { role: 'user', content: `[系统提示 ${formatCurrentTime()}] 你刚打工结束，干了 ${hours.toFixed(1)}h，赚到 ${earned} 元。${pendingNote}` }
     ], 0.85);
 
     const { actions, visibleText } = ActionParser.parse(response);
@@ -567,8 +595,8 @@ export class HeartbeatManager {
     const pendingMsgs = this.contextManager.getPendingUserMessages();
     const hasPendingMsg = pendingMsgs.length > 0;
     const pendingNote = hasPendingMsg
-      ? `对方在你睡觉时发来了 ${pendingMsgs.length} 条消息，请看看并自然地回应。`
-      : `你刚刚醒来。${qualityNote} 发送一条自然的起床消息给对方（如果时间合适的话），或者先做点自己的事。`;
+      ? `对方在你睡觉时发来了 ${pendingMsgs.length} 条消息`
+      : `你刚刚醒来。${qualityNote} `;
 
     const response = await this.ai.chat([
       { role: 'system', content: systemPrompt },

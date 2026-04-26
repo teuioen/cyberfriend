@@ -22,6 +22,16 @@ export class HealthSystem {
 
   getHealth(): number { return this.getState().healthValue; }
   getFatigue(): number { return this.getState().fatigue; }
+  getHunger(): number { return this.getState().hunger; }
+
+  setHunger(value: number): void {
+    this.db.updateHealth({ hunger: Math.min(100, Math.max(0, value)) });
+  }
+
+  eat(amount: number): void {
+    const current = this.getState();
+    this.setHunger(current.hunger + amount);
+  }
 
   /** 调整健康/疲惫值 */
   adjust(adj: HealthAdjust): void {
@@ -52,7 +62,7 @@ export class HealthSystem {
     this.db.updateHealth({ disease: null, diseaseDuration: 0 });
   }
 
-  /** 心跳时调用：处理疾病持续、随机发病等 */
+  /** 心跳时调用：处理疾病持续、饥饿、随机发病等 */
   tick(emotionJoy: number, heartbeatMinutes: number, affection = 0, emotion?: EmotionRow): string[] {
     const events: string[] = [];
     const current = this.getState();
@@ -89,6 +99,23 @@ export class HealthSystem {
       } else {
         this.db.updateHealth({ psychologyDuration: Math.ceil(adjustedRemaining) });
       }
+    }
+
+    // 饥饿值衰减
+    const hungerDecay = this.cfg.hungerDecayPerTick ?? 2;
+    const newHunger = Math.max(0, current.hunger - hungerDecay);
+    this.db.updateHealth({ hunger: newHunger });
+    const damageThreshold = this.cfg.hungerDamageThreshold ?? 0;
+    if (newHunger <= damageThreshold) {
+      // 饥饿扣血并添加状态效果
+      this.adjust({ health: -5 });
+      const statusEffects = this.db.getHealth();
+      if (!statusEffects.disease || !statusEffects.disease.includes('饥饿')) {
+        this.db.updateHealth({ disease: '饥饿', diseaseDuration: 99 });
+      }
+    } else if (current.disease === '饥饿') {
+      // 饥饿缓解，移除饥饿状态
+      this.db.updateHealth({ disease: null, diseaseDuration: 0 });
     }
 
     // 自然恢复 + 情绪健康加成
@@ -128,9 +155,10 @@ export class HealthSystem {
     const h = this.getState();
     const healthBar = `健康:${Math.round(h.healthValue)}/100`;
     const fatigueBar = `疲惫:${Math.round(h.fatigue)}/100`;
+    const hungerBar = `饥饿值:${Math.round(h.hunger)}/100`;
     const diseaseStr = h.disease ? ` | 患病:${h.disease}(剩余${h.diseaseDuration}小时)` : '';
     const psychStr = h.psychologyState !== 'normal' ? ` | 心理:${h.psychologyState}` : '';
-    return `${healthBar} ${fatigueBar}${diseaseStr}${psychStr}`;
+    return `${healthBar} ${fatigueBar} ${hungerBar}${diseaseStr}${psychStr}`;
   }
 
   getDiseaseInfo(): Record<string, { name: string; duration: number }> {

@@ -1,15 +1,9 @@
 /**
  * 行动标签解析器
- * 主要格式（标准 XML 属性风格）：
+ * 支持标准 XML 属性风格：
  *   <TAG attr="val"/>                    自闭合（无内容）
  *   <TAG attr="val">content</TAG>        带内容
  *   <TAG/>  <TAG>                        无属性自闭合
- * 兼容旧格式（降级解析，向后兼容）：
- *   <TAG:params>                         无内容旧式
- *   <TAG:params>[内容]                   带内容旧式（方括号）
- *   <TAG:params>{内容}                   带内容旧式（花括号）
- *   <TAG:params>内容</TAG>               带内容旧式（闭合）
- *   </TAG:params>                        关闭标签带参数（AI出错容错）
  */
 
 export interface ParsedAction {
@@ -27,21 +21,11 @@ export interface ActionResult {
 export class ActionParser {
   // ── 主要格式：标准 XML ──
   // 带内容：<TAG attrs>content</TAG>（排除旧式 <TAG:params>，用 (?!:) 区分）
-  private static xmlContentTagRe = /<([A-Z_]+)(?!:)((?:\s[^>]*)?)>([\s\S]*?)<\/\1>/g;
-  // 自闭合：<TAG attrs/> 或 <TAG/>
-  private static xmlSelfClosingRe = /<([A-Z_]+)(?!:)((?:\s[^>]*)?)\s*\/>/g;
+  private static xmlContentTagRe = /<([A-Z_]+)(?!:)([\s\S]*?)>([\s\S]*?)<\/\1>/g;
+  // 自闭合：<TAG attrs/> 或 <TAG/>  （属性值可跨行）
+  private static xmlSelfClosingRe = /<([A-Z_]+)(?!:)([\s\S]*?)\s*\/>/g;
   // XML 开放标签（已知标签，无内容无自闭合）：<TAG attr="val">
   private static xmlOpenTagRe = /<([A-Z_]+)((?:\s+[^>]*)?)>(?![\[{])/g;
-
-  // ── 兼容旧格式（向后兼容降级） ──
-  // 带内容（方括号/花括号）：<TAG:params>[content] 或 {content}
-  private static oldContentTagRe = /<([A-Z_]+)(?::([^>]*))?>(\[[\s\S]*?\]|\{[\s\S]*?\})/g;
-  // 旧式闭合标签：<TAG:params>content</TAG>
-  private static oldLegacyTagRe = /<([A-Z_]+)(?::([^>]*))?>([^]*?)<\/\1>/g;
-  // 旧式无内容（不跟 [ 或 {）：<TAG:params>、<TAG>、<TAG/>
-  private static oldSelfTagRe = /<([A-Z_]+)(?::([^>]*?))?\/?>(?![\[{])/g;
-  // 容错：关闭标签带参数 </TAG:params>
-  private static closeTagWithParamsRe = /<\/([A-Z_]+):([^>]*)>/g;
 
   // 可携带文本内容的标签
   private static CONTENT_TAGS = new Set([
@@ -75,9 +59,14 @@ export class ActionParser {
     UNBLACKLIST: '解除拉黑',
     NEXT_HEARTBEAT: '心跳间隔',
     SHOP_BUY: '购物',
-    SHOP_USE: '使用物品',
+    SHOP_LIST: '查询商店',
+    SHOP_USE: '使用物品',   // 旧标签别名
+    USE: '使用物品',
     GIVE: '赠送',
     NO_ACTION: '无动作',
+    CURRENCY: '货币',
+    ENABLE_TOOLS: '工具开关',
+    SKILL: '技能',
   };
 
   static getTagName(tag: string): string {
@@ -88,25 +77,41 @@ export class ActionParser {
   static parseXmlAttrs(attrStr: string): Record<string, string> {
     if (!attrStr?.trim()) return {};
     const params: Record<string, string> = {};
-    // 支持 key="val"、key='val'、key=val（无引号）
-    const re = /([a-zA-Z_]+)=(?:"([^"]*)"|'([^']*)'|([^\s"'>\/]+))/g;
+    // 支持 key="val"（含转义引号 \"）、key='val'（含 \'）、key=val（无引号）
+    const re = /([a-zA-Z_]+)=(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|([^\s"'>\/]+))/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(attrStr)) !== null) {
-      params[m[1]] = m[2] ?? m[3] ?? m[4] ?? '';
+      const raw = m[2] ?? m[3] ?? m[4] ?? '';
+      params[m[1]] = ActionParser.decodeAttrValue(raw);
     }
     return params;
   }
 
-  /** 解析旧格式参数字符串（逗号分隔 param1=val1,param2=val2） */
-  static parseParams(paramStr: string): Record<string, string> {
-    if (!paramStr?.trim()) return {};
-    const params: Record<string, string> = {};
-    const re = /([a-zA-Z_]+)=("([^"]*)"|([^,]*))/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(paramStr)) !== null) {
-      params[m[1]] = m[3] !== undefined ? m[3] : (m[4] ?? '').trim();
-    }
-    return params;
+  /** 解码属性值：先解 XML 实体，再解 JSON 风格转义序列（\\n \\t \\\" 等） */
+  static decodeAttrValue(s: string): string {
+    // 先解 XML/HTML 实体
+    let result = ActionParser.decodeXmlEntities(s);
+    // 再解 JSON 风格转义（AI 有时混用）
+    result = result
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t')
+      .replace(/\\"/g, '"')
+      .replace(/\\'/g, "'")
+      .replace(/\\\\/g, '\\');
+    return result;
+  }
+
+  /** 解码 XML/HTML 实体（&lt; &gt; &amp; &quot; &apos; &#N; &#xN;） */
+  static decodeXmlEntities(s: string): string {
+    return s
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
   }
 
   /** 解析 AI 响应，提取行动标签和可见文本 */
@@ -118,7 +123,7 @@ export class ActionParser {
       actions.push({
         tag: tag.toUpperCase(),
         params: ActionParser.parseXmlAttrs(attrStr),
-        content: content.trim(),
+        content: ActionParser.decodeXmlEntities(content.trim()),
         rawText: match,
       });
       return '';
@@ -145,65 +150,6 @@ export class ActionParser {
       });
       return '';
     });
-
-    // ── 第三步：旧格式带内容（方括号/花括号）<TAG:params>[content] ──
-    cleaned = cleaned.replace(ActionParser.oldContentTagRe, (match, tag, paramStr, bracketed) => {
-      actions.push({
-        tag: tag.toUpperCase(),
-        params: ActionParser.parseParams(paramStr ?? ''),
-        content: bracketed.slice(1, -1).trim(),
-        rawText: match,
-      });
-      return '';
-    });
-
-    // ── 第四步：旧格式闭合标签 <TAG:params>content</TAG> ──
-    cleaned = cleaned.replace(ActionParser.oldLegacyTagRe, (match, tag, paramStr, content) => {
-      actions.push({
-        tag: tag.toUpperCase(),
-        params: ActionParser.parseParams(paramStr ?? ''),
-        content: content.trim(),
-        rawText: match,
-      });
-      return '';
-    });
-
-    // ── 第4.5步：容错 - 末尾未闭合内容型标签 ──
-    cleaned = cleaned.replace(
-      /<([A-Z_]+)(?::([^>]*))?\s*>((?:(?!<[A-Z_]+(?::[^>]*)?>)[\s\S])+)\s*$/,
-      (match, tag, paramStr, content) => {
-        if (!ActionParser.CONTENT_TAGS.has(tag.toUpperCase())) return match;
-        actions.push({
-          tag: tag.toUpperCase(),
-          params: ActionParser.parseParams(paramStr ?? ''),
-          content: content.trim(),
-          rawText: match,
-        });
-        return '';
-      });
-
-    // ── 第五步：旧格式无内容 <TAG:params>、<TAG> ──
-    cleaned = cleaned.replace(ActionParser.oldSelfTagRe, (match, tag, paramStr) => {
-      actions.push({
-        tag: tag.toUpperCase(),
-        params: ActionParser.parseParams(paramStr ?? ''),
-        rawText: match,
-      });
-      return '';
-    });
-
-    // ── 第六步：容错 - 关闭标签带参数 </TAG:params> ──
-    cleaned = cleaned.replace(ActionParser.closeTagWithParamsRe, (match, tag, paramStr) => {
-      actions.push({
-        tag: tag.toUpperCase(),
-        params: ActionParser.parseParams(paramStr ?? ''),
-        rawText: match,
-      });
-      return '';
-    });
-
-    // 清理孤立关闭标签
-    cleaned = cleaned.replace(/<\/[A-Z][A-Z_]*>/g, '');
 
     return {
       actions,
@@ -232,21 +178,6 @@ export class ActionParser {
     let result = text.replace(/<([A-Z_]+)(?!:)((?:\s[^>]*)?)>([\s\S]*?)<\/\1>/g, '');
     // 标准 XML 自闭合
     result = result.replace(/<([A-Z_]+)(?!:)((?:\s[^>]*)?)\s*\/>/g, '');
-    // 旧格式带内容（方括号/花括号）
-    result = result.replace(/<([A-Z_]+)(?::([^>]*))?>(\[[\s\S]*?\]|\{[\s\S]*?\})/g, '');
-    // 旧格式闭合标签
-    result = result.replace(/<([A-Z_]+)(?::([^>]*))?>([^]*?)<\/\1>/g, '');
-    // 旧格式末尾未闭合（仅内容型标签）
-    result = result.replace(
-      /<([A-Z_]+)(?::([^>]*))?\s*>((?:(?!<[A-Z_]+(?::[^>]*)?>)[\s\S])+)\s*$/,
-      (_m, tag, _p, _c) => ActionParser.CONTENT_TAGS.has(tag.toUpperCase()) ? '' : _m,
-    );
-    // 旧格式无内容
-    result = result.replace(/<([A-Z_]+)(?::([^>]*?))?\/?>(?![\[{])/g, '');
-    // 关闭标签带参数
-    result = result.replace(/<\/([A-Z_]+):([^>]*)>/g, '');
-    // 普通关闭标签
-    result = result.replace(/<\/[A-Z][A-Z_]*>/g, '');
     return result.trim();
   }
 

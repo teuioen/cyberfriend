@@ -9,6 +9,44 @@ export interface ChatMessage {
   content: string;
 }
 
+// ── Native function calling types ──
+
+export interface OpenAITool {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: {
+      type: 'object';
+      properties: Record<string, { type: string; description: string; enum?: string[] }>;
+      required?: string[];
+    };
+  };
+}
+
+export interface OpenAIToolCall {
+  id: string;
+  type: 'function';
+  function: { name: string; arguments: string };
+}
+
+export interface ToolCallResult {
+  id: string;
+  name: string;
+  arguments: Record<string, string>;
+}
+
+export interface ChatWithToolsResult {
+  content: string;
+  toolCalls: ToolCallResult[];
+}
+
+/** 工具调用流程中的扩展消息格式（含 tool role 和 tool_calls） */
+export type ToolChatMessage =
+  | { role: 'system' | 'user'; content: string }
+  | { role: 'assistant'; content: string | null; tool_calls?: OpenAIToolCall[] }
+  | { role: 'tool'; content: string; tool_call_id: string };
+
 interface ResolvedEndpoint {
   client: OpenAI;
   label: 'main' | 'mini' | 'vision';
@@ -188,9 +226,9 @@ export class AIClient {
   }
 
   /** 主模型对话 */
-  async chat(messages: ChatMessage[], temperature?: number, abortSignal?: AbortSignal): Promise<string> {
+  async chat(messages: ChatMessage[], temperature?: number, abortSignal?: AbortSignal, maxTokensOverride?: number): Promise<string> {
     const src = this.mainSource;
-    const defaultMax = this.cfg.chatMaxTokens ?? 600;
+    const defaultMax = maxTokensOverride ?? this.cfg.chatMaxTokens ?? 600;
     if (src.kind === 'pool' && src.pool.strategy === 'fallback') {
       const ep0 = src.pool.candidates[0];
       const maxTokens = ep0.maxTokens ?? defaultMax;
@@ -405,6 +443,87 @@ export class AIClient {
     logger.fileOnly(`[API] POST ${url} model=${ep.model} status=${status}`);
   }
 
+  /** 原生 function calling：传入工具定义，返回内容文本和工具调用列表 */
+  async chatWithTools(
+    messages: (ChatMessage | ToolChatMessage)[],
+    tools: OpenAITool[],
+    temperature?: number,
+    abortSignal?: AbortSignal,
+    maxTokensOverride?: number,
+  ): Promise<ChatWithToolsResult> {
+    const src = this.mainSource;
+    const defaultMax = maxTokensOverride ?? this.cfg.chatMaxTokens ?? 600;
+    let ep: ResolvedEndpoint;
+    if (src.kind === 'pool') {
+      ep = src.pool.strategy === 'fallback' ? src.pool.candidates[0] : this.pickRandom(src.pool);
+    } else {
+      ep = src.ep;
+    }
+    const maxTokens = ep.maxTokens ?? defaultMax;
+    const temp = temperature ?? ep.temperature ?? this.cfg.temperature;
+    return this.callEndpointWithTools(ep, messages, tools, temp, maxTokens, abortSignal);
+  }
+
+  private async callEndpointWithTools(
+    ep: ResolvedEndpoint,
+    messages: (ChatMessage | ToolChatMessage)[],
+    tools: OpenAITool[],
+    temperature: number,
+    maxTokens?: number,
+    abortSignal?: AbortSignal,
+  ): Promise<ChatWithToolsResult> {
+    const requestBody: Record<string, any> = {
+      model: ep.model,
+      messages,
+      max_tokens: maxTokens ?? this.cfg.maxTokens,
+      temperature,
+      tools,
+      tool_choice: 'auto',
+      ...ep.extraBody,
+    };
+    if (ep.chatTemplateKwargs && typeof ep.chatTemplateKwargs === 'object' && Object.keys(ep.chatTemplateKwargs).length > 0) {
+      requestBody.chat_template_kwargs = ep.chatTemplateKwargs;
+    }
+    if (this.logRequests) {
+      logger.info(`[AI:Request] ${ep.label} ${ep.model} (tools)\n${JSON.stringify(requestBody, null, 2)}`);
+    } else {
+      logger.debug(`[AI] 调用 ${ep.model} (tools), 工具数=${tools.length}, 消息数=${messages.length}`);
+    }
+    try {
+      const resp = await ep.client.chat.completions.create(requestBody as any, { signal: abortSignal } as any);
+      this.logApiRequest(ep, 200);
+      const usage = (resp as any).usage;
+      if (usage && this.onUsage) {
+        try {
+          this.onUsage({
+            endpoint: ep.label,
+            model: ep.model,
+            promptTokens: usage.prompt_tokens ?? 0,
+            completionTokens: usage.completion_tokens ?? 0,
+            totalTokens: usage.total_tokens ?? 0,
+          });
+        } catch (e: any) {
+          logger.warn(`[AI] 记录 token 用量失败: ${e?.message ?? e}`);
+        }
+      }
+      this.lastUsedModel = ep.model;
+      const message = (resp as any).choices?.[0]?.message;
+      const content: string = (message?.content ?? '').trim();
+      const rawToolCalls: any[] = message?.tool_calls ?? [];
+      const toolCalls: ToolCallResult[] = rawToolCalls.map((tc: any) => {
+        let args: Record<string, string> = {};
+        try { args = JSON.parse(tc.function?.arguments ?? '{}'); } catch { /* keep empty */ }
+        return { id: tc.id, name: tc.function?.name ?? '', arguments: args };
+      });
+      logger.debug(`[AI] tools响应: content_len=${content.length}, tool_calls=${toolCalls.length}`);
+      return { content, toolCalls };
+    } catch (err: any) {
+      this.logApiRequest(ep, err?.status ?? err?.code ?? 'ERROR');
+      throw err;
+    }
+  }
+
+
   /** 压缩对话历史 */
   async compressHistory(messages: ChatMessage[]): Promise<string> {
     const prompt: ChatMessage[] = [
@@ -424,18 +543,19 @@ export class AIClient {
   }
 
   /** 生成梦境内容，返回内容和梦境类型 */
-  async generateDream(context: string, emotionSummary: string, mood: string): Promise<{ content: string; type: 'sweet' | 'nightmare' | 'weird' | 'neutral' }> {
-    const prompt: ChatMessage[] = [
-      {
-        role: 'system',
-        content: `你是${this.charName}，正在熟睡，进入了梦境。根据近期记忆和情绪，生成一段梦境描述。
-要求：诗意、感性、充满意象，可以扭曲现实；100-200字；文字自然流动，不用标题。
+  async generateDream(context: string, emotionSummary: string, mood: string, freeform = false): Promise<{ content: string; type: 'sweet' | 'nightmare' | 'weird' | 'neutral' }> {
+    const systemContent = freeform
+      ? `你是${this.charName}，正在熟睡，进入了梦境。请生成一段与现实无关的奇异梦境，可以是幻想世界、荒诞场景、象征性意象、纯粹的感官体验。诗意、感性、充满想象力；100-200字；文字自然流动，不用标题。
 最后单独一行写：TYPE:sweet（美梦）/nightmare（噩梦）/weird（奇异梦）/neutral（普通梦）`
-      },
-      {
-        role: 'user',
-        content: `当前情绪：${emotionSummary}\n近期心情：${mood}\n近期记忆：${context}\n\n请生成梦境内容：`
-      }
+      : `你是${this.charName}，正在熟睡，进入了梦境。根据近期记忆和情绪，生成一段梦境描述。
+要求：诗意、感性、充满意象，可以扭曲现实；100-200字；文字自然流动，不用标题。
+最后单独一行写：TYPE:sweet（美梦）/nightmare（噩梦）/weird（奇异梦）/neutral（普通梦）`;
+    const userContent = freeform
+      ? `当前情绪：${emotionSummary}\n近期心情：${mood}\n\n请生成一段充满想象力的梦境内容（不基于现实记忆）：`
+      : `当前情绪：${emotionSummary}\n近期心情：${mood}\n近期记忆：${context}\n\n请生成梦境内容：`;
+    const prompt: ChatMessage[] = [
+      { role: 'system', content: systemContent },
+      { role: 'user', content: userContent }
     ];
     const raw = await this.mini(prompt, 0.92);
     // 解析最后一行的 TYPE 标记

@@ -1,6 +1,6 @@
 /**
  * 商店系统
- * 支持用户和AI使用虚拟货币购买物品，物品有不同效果
+ * 支持用户和AI使用元购买物品，物品有不同效果
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -13,6 +13,7 @@ import { logger } from '../utils/logger';
 export interface ShopItemEffect {
   health?: number;
   fatigue?: number;
+  hunger?: number;       // 进食恢复饥饿值（食物类物品）
   affection?: number;
   cure_disease?: boolean;
 }
@@ -23,6 +24,7 @@ export interface ShopItem {
   description: string;
   usesPerUnit?: number;   // 每购买1件提供的使用次数（默认1）
   effects?: ShopItemEffect;
+  tags?: string[];        // 商品标签/种类（如 ["食物","饮料"]），用于 SHOP_LIST 过滤
 }
 
 interface ShopConfig {
@@ -109,7 +111,7 @@ export class ShopSystem {
     if (state.userCurrency < totalCost) {
       return {
         success: false,
-        message: `余额不足！需要 ${totalCost} 虚拟币，你当前有 ${Math.round(state.userCurrency)} 虚拟币`,
+        message: `余额不足！需要 ${totalCost} 元，你当前有 ${Math.round(state.userCurrency)} 元`,
       };
     }
 
@@ -122,7 +124,7 @@ export class ShopSystem {
     const remaining = Math.round(state.userCurrency - totalCost);
     return {
       success: true,
-      message: `✅ 购买成功！获得「${itemName}」x${uses} 次使用（-${totalCost} 虚拟币，剩余 ${remaining}）`,
+      message: `✅ 购买成功！获得「${itemName}」x${uses} 次使用（-${totalCost} 元，剩余 ${remaining}）`,
     };
   }
 
@@ -139,7 +141,7 @@ export class ShopSystem {
     const totalCost = item.price * qty;
     const state = this.relSys.getState();
     if (state.aiCurrency < totalCost) {
-      return { success: false, message: `余额不足（AI当前 ${Math.round(state.aiCurrency)} 虚拟币）` };
+      return { success: false, message: `余额不足（AI当前 ${Math.round(state.aiCurrency)} 元）` };
     }
 
     this.relSys.adjustCurrency('ai', -totalCost);
@@ -185,6 +187,17 @@ export class ShopSystem {
       if (e.health) { this.healthSys.adjust({ health: e.health }); effects.push(`健康${e.health > 0 ? '+' : ''}${e.health}`); }
       if (e.fatigue) { this.healthSys.adjust({ fatigue: e.fatigue }); effects.push(`疲惫${e.fatigue > 0 ? '+' : ''}${e.fatigue}`); }
       if (e.affection) { this.relSys.adjustAffection(e.affection); effects.push(`好感度+${e.affection}`); }
+      if (e.hunger != null) {
+        this.healthSys.eat(e.hunger);
+        effects.push(`饥饿${e.hunger > 0 ? '+' : ''}${e.hunger}`);
+      } else if (item.tags?.some(t => t === '食物' || t === '饮料' || t === '食品' || t === 'food')) {
+        // 食物标签但未设置 hunger 效果时给默认恢复量
+        this.healthSys.eat(20);
+        effects.push('饥饿+20');
+      }
+    } else if (item?.tags?.some(t => t === '食物' || t === '饮料' || t === '食品' || t === 'food')) {
+      this.healthSys.eat(20);
+      effects.push('饥饿+20');
     }
 
     const effectStr = effects.length ? effects.join('，') : '使用成功';
@@ -196,8 +209,16 @@ export class ShopSystem {
     if (!this.items.length) return '商店暂无商品';
     const rel = this.relSys.getState();
     const lines = this.items.map(item =>
-      `  ${item.name.padEnd(8)} ${String(item.price).padStart(4)} 虚拟币  ${item.description}`
+      `  ${item.name.padEnd(8)} ${String(item.price).padStart(4)} 元  ${item.description}`
     );
-    return `\n===== 商店 =====\n${lines.join('\n')}\n\n你的余额: ${Math.round(rel.userCurrency)} 虚拟币\n  购买: /buy <物品名> [数量]`;
+    return `\n===== 商店 =====\n${lines.join('\n')}\n\n你的余额: ${Math.round(rel.userCurrency)} 元\n  购买: /buy <物品名> [数量]`;
+  }
+
+  /** 返回所有可购买商品名称（可按标签过滤） */
+  getItemNames(tag?: string): string[] {
+    const items = tag
+      ? this.items.filter(i => i.tags?.some(t => t.includes(tag)) || i.name.includes(tag))
+      : this.items;
+    return items.map(i => i.name);
   }
 }

@@ -113,6 +113,15 @@ export function loadConfig(configDir?: string): FullConfig {
     }
   }
 
+  // 加载 skills.yaml（可选）
+  const skillsPath = path.join(dir, 'skills.yaml');
+  if (fs.existsSync(skillsPath)) {
+    const skillsCfg = yaml.load(fs.readFileSync(skillsPath, 'utf8')) as any;
+    if (skillsCfg?.skills) {
+      app.skills = skillsCfg;
+    }
+  }
+
   _config = { app, character };
   return _config;
 }

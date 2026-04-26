@@ -107,9 +107,11 @@ health:
   diseaseProbability: 0.06     # 每次心跳随机患病概率（0.06 = 6%）
   sleepHealthBonus: 3.0        # 睡眠后健康值加成（乘以睡眠质量系数）
   sleepFatigueMinus: 30.0      # 睡眠后疲惫减少量
-  initialValues:               # 初始健康/疲惫
+  hungerDecayPerTick: 2.0      # 每次心跳饥饿值减少量（0-100，归零后开始扣血）
+  hungerDamageThreshold: 0     # 饥饿值低于此值时开始扣血（0=归零后扣血）
+  initialValues:               # 初始健康/疲惫/饥饿
     healthValue: 100.0
-    fatigue: 0.0
+    fatigue: 10.0
 
 context:
   maxMessages: 50              # 超过此数量触发对话历史压缩
@@ -123,8 +125,8 @@ message:
   typingSpeedCharsPerSec: 8    # 模拟打字速度（字/秒），影响延迟计算
 
 economy:
-  dailyCurrencyUser: 50        # 系统每天发给对方的虚拟货币
-  dailyCurrencyAi: 0           # 系统每天发给你的虚拟货币
+  dailyCurrencyUser: 0        # 系统每天发给对方的余额
+  dailyCurrencyAi: 50           # 系统每天发给你的余额
 
 relationship:
   initialAffection: 5.0       # 初始好感度（角色开局对对方的亲近程度）
@@ -140,7 +142,7 @@ sleep:
   fatigueForceSleepThreshold: 90  # 疲惫达到该值后，系统会直接强制睡觉
 
 work:
-  earningPerHour: 60           # 打工每小时收益（虚拟币）
+  earningPerHour: 60           # 打工每小时收益（元）
   maxHours: 72                 # 单次最长打工时长（小时）
   fatiguePerHour: 8            # 打工每小时额外增加的疲惫值
 
@@ -198,3 +200,19 @@ weather:
 
 # 显示已执行的行动摘要（如"✨ 情绪 → anger:+3"）
 showActionSummary: true
+
+# 商店配置文件路径（相对于配置目录），默认 shop.yaml
+# shopConfigPath: shop.yaml
+
+# 工具系统（允许AI调用沙盒工具：命令行、文件读写等）
+# tools:
+#   enabled: false
+#   workspace: data/workspace    # 工具沙盒工作目录（相对于 cwd）
+#   allowShell: false            # 允许执行命令行命令
+#   allowNet: false              # 允许网络访问
+#   shellTimeout: 10000          # 命令执行超时（毫秒）
+#   callbackMaxOutputTokens: 16384  # 工具回调时 AI 最大输出 token 数（覆盖全局 chatMaxTokens）
+#   codingPromptFile: config/coding_prompt.txt  # 自定义编程辅助提示词文件（可选，默认使用内置提示词）
+
+# 技能系统配置（指向 skills.yaml）
+# 创建 config/skills.yaml 即可自动加载，参考 config/skills.yaml.example

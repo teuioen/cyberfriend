@@ -16,6 +16,8 @@ import { Database } from '../database/db';
 import { AIClient } from './ai';
 import { CharacterConfig } from '../config/types';
 import { logger } from '../utils/logger';
+import { ToolEngine } from './tools';
+import { SkillsSystem } from '../systems/skills';
 
 export interface ExecutionResult {
   messagesToSend: string[];   // 需要发送给用户的消息（来自 SEND_MESSAGE 标签）
@@ -25,6 +27,7 @@ export interface ExecutionResult {
   noAction: boolean;
   silent: boolean;            // 不回复用户（来自 SILENT 标签）
   diaryEntries?: string;      // 翻阅日记的内容（用于二次 AI 调用）
+  systemMessagesToInject?: string[];  // 工具调用/技能上下文注入
 }
 
 import { WeatherSystem } from '../systems/weather';
@@ -36,6 +39,12 @@ export class ActionExecutor {
   private static safePrint: ((msg: string) => void) | null = null;
   static setSafePrint(fn: (msg: string) => void): void {
     ActionExecutor.safePrint = fn;
+  }
+
+  /** 调用 safePrint 打印文本（可从外部调用） */
+  static printSafe(msg: string): void {
+    if (ActionExecutor.safePrint) ActionExecutor.safePrint(msg);
+    else process.stdout.write(msg + '\n');
   }
 
   constructor(
@@ -51,7 +60,9 @@ export class ActionExecutor {
     private shopSys?: ShopSystem,
     private workSys?: WorkSystem,
     private db?: Database,
-    private weatherSys?: WeatherSystem
+    private weatherSys?: WeatherSystem,
+    private toolEngine?: ToolEngine,
+    private skillsSys?: SkillsSystem
   ) {}
 
   /** 设置是否显示行动摘要 */
@@ -124,8 +135,6 @@ export class ActionExecutor {
         }
         this.emotionSys.update(deltas);
         const deltaStr = Object.entries(deltas).map(([k, v]) => `${k}:${v > 0 ? '+' : ''}${v}`).join(', ');
-        // 原始标签写入日志，摘要输出到终端
-        // logger.fileOnly(`<EMOTION:${Object.entries(deltas).map(([k, v]) => `${k}=${v > 0 ? '+' : ''}${v}`).join(',')}>`);
         this.printActionSummary('情绪', deltaStr);
         break;
       }
@@ -137,7 +146,6 @@ export class ActionExecutor {
         const importance = parseInt(params.importance ?? '5', 10);
         const clean = ActionParser.stripAll(content);
         this.memorySys.save(level, clean, importance);
-        // logger.fileOnly(`<MEMORY_SAVE:level=${level},importance=${importance}>\n${clean}\n</MEMORY_SAVE>`);
         this.printActionSummary('记忆存储', `[${level}] 重要度=${importance}: ${clean.slice(0, 60)}${clean.length > 60 ? '...' : ''}`);
         break;
       }
@@ -149,10 +157,8 @@ export class ActionExecutor {
         const clean = ActionParser.stripAll(content);
         const ok = this.memorySys.update(memId, clean, importance);
         if (ok) {
-          // logger.fileOnly(`<MEMORY_UPDATE:id=${memId}${importance ? `,importance=${importance}` : ''}>\n${clean}\n</MEMORY_UPDATE>`);
           this.printActionSummary('记忆更新', `[ID=${memId}]${importance ? ` 重要度=${importance}` : ''}: ${clean.slice(0, 60)}${clean.length > 60 ? '...' : ''}`);
         } else {
-          // 记忆更新失败，保留原有警告
           logger.warn(`[Error] 记忆更新失败 [ID=${memId}] (记忆不存在)`);
         }
         break;
@@ -161,7 +167,6 @@ export class ActionExecutor {
       case 'MEMORY_DELETE': {
         const memId = parseInt(params.id ?? '0', 10);
         this.memorySys.delete(memId);
-        // logger.fileOnly(`<MEMORY_DELETE:id=${memId}>`);
         this.printActionSummary('记忆删除', `[ID=${memId}]`);
         break;
       }
@@ -170,7 +175,6 @@ export class ActionExecutor {
         const health = params.health ? ActionParser.parseDelta(params.health) : 0;
         const fatigue = params.fatigue ? ActionParser.parseDelta(params.fatigue) : 0;
         this.healthSys.adjust({ health, fatigue });
-        // logger.fileOnly(`<HEALTH:health=${health > 0 ? '+' : ''}${health},fatigue=${fatigue > 0 ? '+' : ''}${fatigue}>`);
         const parts = [];
         if (health) parts.push(`健康:${health > 0 ? '+' : ''}${health}`);
         if (fatigue) parts.push(`疲惫:${fatigue > 0 ? '+' : ''}${fatigue}`);
@@ -181,7 +185,6 @@ export class ActionExecutor {
       case 'AFFECTION': {
         const delta = ActionParser.parseDelta(params.delta ?? '0');
         this.relSys.adjustAffection(delta);
-        // logger.fileOnly(`<AFFECTION:delta=${delta > 0 ? '+' : ''}${delta}>`);
         this.printActionSummary('好感', `${delta > 0 ? '+' : ''}${delta}`);
         break;
       }
@@ -190,7 +193,6 @@ export class ActionExecutor {
         const owner = (params.owner as 'user' | 'ai') || 'ai';
         const delta = ActionParser.parseDelta(params.delta ?? '0');
         this.relSys.adjustCurrency(owner, delta);
-        // logger.fileOnly(`<CURRENCY:owner=${owner},delta=${delta > 0 ? '+' : ''}${delta}>`);
         this.printActionSummary('货币', `[${owner}] ${delta > 0 ? '+' : ''}${delta}`);
         break;
       }
@@ -199,7 +201,6 @@ export class ActionExecutor {
         const key = params.key || 'cold';
         const duration = params.duration ? parseInt(params.duration) : undefined;
         this.healthSys.triggerDisease(key, duration);
-        // logger.fileOnly(`<DISEASE:key=${key}${duration ? `,duration=${duration}` : ''}>`);
         this.printActionSummary('疾病', `${key}${duration ? ` 持续${duration}h` : ''}`);
         break;
       }
@@ -207,7 +208,6 @@ export class ActionExecutor {
       case 'DISEASE_CURE': {
         const name = params.name;
         this.healthSys.cureDisease(name);
-        // logger.fileOnly(`<DISEASE_CURE:name=${name ?? '全部'}>`);
         this.printActionSummary('治愈疾病', `${name ?? '全部'}`);
         break;
       }
@@ -216,7 +216,6 @@ export class ActionExecutor {
         if (!content) break;
         const mood = this.emotionSys.getMoodTag();
         let cleanContent = ActionParser.stripAll(content);
-        // 自动在日记开头注入天气（若日记内容本身未提及天气）
         if (this.weatherSys) {
           const w = this.weatherSys.getWeather();
           if (w && !cleanContent.includes(w.description) && !cleanContent.includes('天气')) {
@@ -225,7 +224,6 @@ export class ActionExecutor {
           }
         }
         this.diarySys.save(cleanContent, mood);
-        // logger.fileOnly(`<DIARY_WRITE:mood=${mood}>\n${cleanContent}\n</DIARY_WRITE>`);
         this.printActionSummary('日记写入', `[心情:${mood}] ${cleanContent.slice(0, 80)}${cleanContent.length > 80 ? '...' : ''}`);
         break;
       }
@@ -241,7 +239,6 @@ export class ActionExecutor {
 
         if (entries.length > 0) {
           result.diaryEntries = this.diarySys.formatForDisplay(entries);
-          // logger.fileOnly(`<DIARY_READ:limit=${limit},date=${date ?? '无'},random=${random}>`);
           this.printActionSummary('翻阅日记', `${entries.length} 篇${random ? '（随机）' : ''}`);
         } else {
           result.diaryEntries = '（还没有写过日记）';
@@ -256,14 +253,12 @@ export class ActionExecutor {
         const emotion = this.emotionSys.getState();
         this.sleepSys.startSleep(duration, health.healthValue, emotion.joy);
         result.sleepStarted = true;
-        // logger.fileOnly(`<SLEEP:duration=${duration ?? '随机'}>`);
         this.printActionSummary('睡眠', `${duration ?? '随机'}小时`);
         break;
       }
 
       case 'DREAM': {
         // 梦境由系统在睡眠期间自动生成，此标签为 no-op
-        // logger.fileOnly('<DREAM>');
         break;
       }
 
@@ -271,7 +266,6 @@ export class ActionExecutor {
         if (!content) break;
         const parts = ActionParser.splitMessages(content);
         result.messagesToSend.push(...parts);
-        // logger.fileOnly(`<SEND_MESSAGE:count=${parts.length}>\n${parts.join('\n')}\n</SEND_MESSAGE>`);
         this.printActionSummary('发送消息', `${parts.length}条`);
         break;
       }
@@ -280,13 +274,10 @@ export class ActionExecutor {
         if (!params.name || !params.trigger_time) break;
         try {
           const rawContent = content ?? '';
-          // 如果内容含行动标签，整体作为 actionTags 存储，同时提取纯文字描述
           const hasTags = /<[A-Z_]+/.test(rawContent);
           const actionTagsStr = hasTags ? rawContent : undefined;
-          // 描述从标签内容提取
           const descriptionOnly = (ActionParser.stripAll(rawContent).trim() || undefined);
           this.scheduler.create(params.name, params.trigger_time, descriptionOnly, 'ai', actionTagsStr);
-          // logger.fileOnly(`<TASK_CREATE name="${params.name}" trigger_time="${params.trigger_time}"/>`);
           this.printActionSummary('任务创建', `${params.name} @ ${params.trigger_time}${actionTagsStr ? ' [含行动]' : ''}`);
         } catch (e) {
           logger.warn(`[Error] 任务创建失败: ${e}`);
@@ -297,73 +288,77 @@ export class ActionExecutor {
       case 'NEXT_HEARTBEAT': {
         const minutes = parseInt(params.minutes ?? '30', 10);
         result.nextHeartbeatMinutes = Math.max(30, minutes);
-        // logger.fileOnly(`<NEXT_HEARTBEAT:minutes=${result.nextHeartbeatMinutes}>`);
         this.printActionSummary('心跳间隔', `${result.nextHeartbeatMinutes} 分钟`);
         break;
       }
 
       case 'NO_ACTION': {
         result.noAction = true;
-        // logger.fileOnly('<NO_ACTION>');
         this.printActionSummary('无动作', '');
         break;
       }
 
       case 'SILENT': {
         result.silent = true;
-        // logger.fileOnly('<SILENT>');
         this.printActionSummary('沉默', '本次不回复');
         break;
       }
 
-      case 'BLACKLIST': {
-        if (!this.db) break;
-        const reason = params.reason ?? '不想说话';
-        this.db.setBlacklistByAi(true, reason);
-        // logger.fileOnly(`<BLACKLIST:reason=${reason}>`);
-        this.printActionSummary('拉黑用户', reason);
-        break;
-      }
-
+      case 'BLACKLIST':
       case 'UNBLACKLIST': {
         if (!this.db) break;
-        this.db.setBlacklistByAi(false);
-        // logger.fileOnly('<UNBLACKLIST>');
-        this.printActionSummary('解除拉黑', '');
+        const stateParam = (params.state ?? (action.tag === 'UNBLACKLIST' ? 'off' : 'on')).toLowerCase();
+        const enable = stateParam !== 'off' && stateParam !== 'false' && stateParam !== '0';
+        if (enable) {
+          const reason = params.reason ?? '不想说话';
+          this.db.setBlacklistByAi(true, reason);
+          this.printActionSummary('拉黑用户', reason);
+        } else {
+          this.db.setBlacklistByAi(false);
+          this.printActionSummary('解除拉黑', '');
+        }
         break;
       }
 
-      // AI自主购物：<SHOP_BUY:item=感冒药,qty=1>
+      case 'SHOP_LIST': {
+        if (!this.shopSys) break;
+        const tag = params.category ?? params.tag ?? undefined;
+        const items = this.shopSys.getItemNames(tag);
+        if (!result.systemMessagesToInject) result.systemMessagesToInject = [];
+        const label = tag ? `「${tag}」类商品` : '商店商品';
+        result.systemMessagesToInject.push(`${label}列表（共${items.length}件）：${items.join('、')}`);
+        this.printActionSummary('查询商店', `${items.length} 件商品${tag ? `（${tag}）` : ''}`);
+        break;
+      }
+
       case 'SHOP_BUY': {
-        if (!params.item || !this.shopSys) break;
+        if (!params.item && !params.name || !this.shopSys) break;
+        const itemName = params.item ?? params.name!;
         const qty = parseInt(params.qty ?? '1', 10);
-        const res = this.shopSys.aiBuy(params.item, qty);
+        const res = this.shopSys.aiBuy(itemName, qty);
         if (res.success) {
-          // logger.fileOnly(`<SHOP_BUY:item=${params.item},qty=${qty}>`);
-          this.printActionSummary('购物', `${params.item} x${qty}`);
+          this.printActionSummary('购物', `${itemName} x${qty}`);
         } else {
           logger.warn(`[Error] AI购买失败: ${res.message}`);
         }
         break;
       }
 
-      // AI自主使用物品：<SHOP_USE:item=感冒药>
+      case 'USE':
       case 'SHOP_USE': {
         if (!params.item || !this.shopSys) break;
         const res = this.shopSys.aiUseItem(params.item);
         if (res.success) {
-          // logger.fileOnly(`<SHOP_USE:item=${params.item}>`);
           this.printActionSummary('使用物品', `${params.item}：${res.message}`);
         }
         break;
       }
 
-      // 统一赠送标签：<GIVE:item=物品名,qty=1> 或 <GIVE:money=N>
-      // 赠送物品需先SHOP_BUY购入；赠送金钱从AI账户扣除
       case 'GIVE': {
-        if (params.money !== undefined) {
-          // 赠送金钱
-          const amount = parseFloat(params.money ?? params.amount ?? '0');
+        // item="money" 或 money="N" 均视为转账
+        const isMoneyTransfer = params.money !== undefined || params.item === 'money';
+        if (isMoneyTransfer) {
+          const amount = parseFloat(params.money ?? params.qty ?? params.amount ?? '0');
           if (amount <= 0) break;
           const state = this.relSys.getState();
           if (state.aiCurrency < amount) {
@@ -373,10 +368,8 @@ export class ActionExecutor {
           this.relSys.adjustCurrency('ai', -amount);
           this.relSys.adjustCurrency('user', amount);
           this.relSys.adjustAffection(0.5);
-          // logger.fileOnly(`<GIVE:money=${amount}>`);
-          this.printActionSummary('赠送金钱', `${amount} 虚拟币`);
+          this.printActionSummary('赠送金钱', `${amount} 元`);
         } else if (params.item) {
-          // 赠送物品（从AI背包转给用户）
           if (!this.shopSys) break;
           const qty = parseInt(params.qty ?? '1', 10);
           const aiInventoryList = this.shopSys['db'].getInventory('ai') as import('../database/db').InventoryItem[];
@@ -388,29 +381,53 @@ export class ActionExecutor {
           this.shopSys['db'].updateInventory('ai', params.item, -qty);
           this.shopSys['db'].updateInventory('user', params.item, qty);
           this.relSys.adjustAffection(1);
-          // logger.fileOnly(`<GIVE:item=${params.item},qty=${qty}>`);
           this.printActionSummary('赠送物品', `${qty} 个「${params.item}」`);
         }
         break;
       }
 
-      // AI决定去打工：<WORK_START:hours=N>
       case 'WORK_START': {
         if (!this.workSys) break;
-        if (this.workSys.isWorking()) {
-          // logger.fileOnly('<WORK_START:skipped=已在打工中>');
-          break;
-        }
+        if (this.workSys.isWorking()) break;
         const hours = parseFloat(params.hours ?? '1');
         this.workSys.startWork(hours);
         result.workStarted = true;
-        // logger.fileOnly(`<WORK_START:hours=${hours}>`);
         this.printActionSummary('打工', `${hours}小时`);
         break;
       }
 
+      case 'ENABLE_TOOLS': {
+        if (!this.toolEngine) break;
+        const state = (params.state ?? 'on').toLowerCase();
+        if (state === 'off' || state === 'false' || state === '0') {
+          this.toolEngine.disableForSession();
+          this.printActionSummary('工具', '本次会话已禁用工具调用');
+        } else {
+          this.toolEngine.enableForSession();
+          this.printActionSummary('工具', '本次会话已启用工具调用');
+        }
+        break;
+      }
+
+      case 'SKILL': {
+        if (!this.skillsSys) break;
+        const skillName = params.name;
+        if (!skillName) break;
+        const skillResult = this.skillsSys.invoke(skillName);
+        if (!skillResult.found) {
+          logger.warn(`[Skills] 技能未找到: ${skillName}`);
+          break;
+        }
+        if (skillResult.context) {
+          if (!result.systemMessagesToInject) result.systemMessagesToInject = [];
+          result.systemMessagesToInject.push(`技能「${skillName}」上下文：\n${skillResult.context}`);
+        }
+        this.printActionSummary('技能', skillName);
+        break;
+      }
+
       default:
-        // logger.fileOnly(`<${tag}>`);
+        break;
     }
   }
 }

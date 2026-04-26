@@ -131,6 +131,10 @@ export interface HealthConfig {
   sleepFatigueMinus: number;
   /** 初始健康/疲惫值 */
   initialValues?: HealthInitialValuesConfig;
+  /** 每次心跳饥饿值减少量，默认2 */
+  hungerDecayPerTick?: number;
+  /** 饥饿值低于此阈值时开始扣血，默认0 */
+  hungerDamageThreshold?: number;
 }
 
 export interface ContextConfig {
@@ -256,6 +260,31 @@ export interface AppConfig {
   weather?: WeatherConfig;
   debug?: boolean;   // 开启调试模式，解锁 /debug 命令组
   showActionSummary?: boolean;  // 显示已执行的行动摘要
+  shopConfigPath?: string;      // 商店配置文件路径（相对于配置目录），默认 shop.yaml
+  tools?: ToolsConfig;
+  skills?: SkillsConfig;
+}
+
+export interface ToolsConfig {
+  enabled: boolean;
+  workspace: string;       // 工具沙盒工作目录（相对于 cwd），默认 data/workspace
+  allowShell: boolean;     // 允许执行命令行命令
+  allowNet: boolean;       // 允许网络访问
+  shellTimeout: number;    // 命令执行超时（毫秒），默认 10000
+  callbackMaxOutputTokens?: number;  // 工具回调时 AI 最大输出 token 数（覆盖全局 chatMaxTokens）
+  codingPromptFile?: string;  // 自定义编程辅助提示词文件路径（启用工具时注入），默认使用内置提示词
+}
+
+export interface SkillDefinition {
+  name: string;
+  description: string;
+  prompt?: string;      // 调用技能时额外注入的上下文/指令
+  actions?: string[];   // 预定义行动标签（触发时自动执行）
+  enabled?: boolean;    // 默认 true
+}
+
+export interface SkillsConfig {
+  skills: SkillDefinition[];
 }
 
 export interface CharacterConfig {

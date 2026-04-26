@@ -57,7 +57,7 @@ export class RelationshipSystem {
     }
   }
 
-  /** 每日发放虚拟货币 */
+  /** 每日发放货币 */
   dailyGrant(): void {
     const current = this.getState();
     this.db.updateRelationship({
@@ -88,7 +88,7 @@ export class RelationshipSystem {
     const r = this.getState();
     const aff = Math.round(r.affection);
     const affLabel = aff >= 80 ? '挚友' : aff >= 60 ? '好友' : aff >= 40 ? '普通朋友' : aff >= 20 ? '泛泛之交' : '陌生人';
-    return `好感度:${aff}/100(${affLabel}) | 我的余额:${Math.round(r.aiCurrency)}虚拟币 | 用户余额:${Math.round(r.userCurrency)}虚拟币`;
+    return `好感度:${aff}/100(${affLabel}) | 我的余额:${Math.round(r.aiCurrency)}元 | 用户余额:${Math.round(r.userCurrency)}元`;
   }
 
   private setAffection(value: number, markActivity: boolean): void {

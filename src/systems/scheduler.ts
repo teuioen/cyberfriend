@@ -46,7 +46,11 @@ export class TaskScheduler {
     return all.map(t => {
       const d = new Date(t.triggerTime);
       const status = t.triggerTime <= Date.now() ? '⏰ 待执行' : '🕐 待触发';
-      return `${status} [${d.toLocaleString('zh-CN')}] ${t.name} (来自:${t.createdBy})`;
+      const timeStr = d.toLocaleString('zh-CN');
+      const source = t.createdBy === 'user' ? '👤 用户' : '🤖 AI';
+      const desc = t.description ? `\n    说明：${t.description}` : '';
+      const actions = t.actionTags ? `\n    触发行动：${t.actionTags}` : '';
+      return `${status} [${timeStr}] ${t.name}  来自：${source}${desc}${actions}`;
     }).join('\n');
   }
 }
